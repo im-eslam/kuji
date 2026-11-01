@@ -5,7 +5,6 @@ type IdleWindow = typeof window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
-/** True once the browser has had a quiet moment after first paint. Used to defer mounting off-screen cards. */
 export function useIdle(): boolean {
   const [idle, setIdle] = useState(false);
   useEffect(() => {

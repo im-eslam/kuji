@@ -1,47 +1,23 @@
 <?php
 
-class MenuController extends Controller
+final class MenuController extends Controller
 {
     protected const FEATURE = 'menu';
-
-    // ---- public ----
 
     public function index(): void
     {
         try {
-            Http::json($this->store()->read());
-        } catch (RuntimeException $e) {
-            error_log('[menu] read failed: ' . $e->getMessage());
-            Http::fail(500, 'Menu is temporarily unavailable.');
-        }
-    }
-
-    // ---- admin ----
-
-    public function save(): void
-    {
-        Auth::requireAdmin($this->config);
-
-        $menu = Http::input($this->settings()['max_body']);
-
-        $store   = $this->store();
-        $problem = $store->validate($menu);
-        if ($problem !== null) {
-            Http::fail(422, $problem);
+            $json = (new MenuRW($this->settings()['file']))->read();
+        } catch (RuntimeException $error) {
+            error_log('[menu] read failed: ' . $error->getMessage());
+            Http::fail(500, 'Menu is temporarily unavailable.', 'MENU_UNAVAILABLE');
         }
 
-        try {
-            $saved = $store->write($menu);
-        } catch (RuntimeException | JsonException $e) {
-            error_log('[menu] write failed: ' . $e->getMessage());
-            Http::fail(500, 'Menu could not be saved.');
-        }
+        http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
 
-        Http::json(['ok' => true, 'updatedAt' => $saved['updatedAt']]);
-    }
-
-    private function store(): MenuStore
-    {
-        return new MenuStore($this->settings()['file']);
+        echo $json;
+        exit;
     }
 }

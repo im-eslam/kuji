@@ -1,57 +1,63 @@
+import { findProduct } from "../../lib/catalog";
 import { lineRegularPrice, lineUnitPrice } from "../../lib/pricing";
-import type { MenuDb, OrderLine as Line } from "../../types";
+import type { MenuResponse, OrderLine } from "../../types";
+type Line = Extract<OrderLine, { kind: "bundle" }>;
 import { Chip } from "../atoms/Chip";
 import { Img } from "../atoms/Image";
 import { OrderLineFrame } from "./OrderLine";
 
 interface Props {
   line: Line;
-  db: MenuDb;
+  menu: MenuResponse;
   pick: (name: { en: string; ar: string }) => string;
   onEdit: (line: Line) => void;
   onSetQty: (line: Line, qty: number) => void;
   onRemove: (line: Line) => void;
 }
 
-export function OrderLineBundle({ line, db, pick, ...handlers }: Props) {
-  const products = line.parts.map((p) => db.productsById.get(p.productId));
-  if (products.some((p) => !p)) return null;
-  const items = products as NonNullable<(typeof products)[number]>[];
-  const names = items.map((i) => pick(i.name));
-  const rows = line.parts.flatMap((p, i) => {
-    const size = p.sizeId ? db.sizesById.get(p.sizeId) : undefined;
-    const chips = [...(size ? [pick(size.name)] : []), ...p.addOnIds.flatMap((id) => { const a = db.addOnsById.get(id); return a ? [pick(a.name)] : []; })];
-    return chips.length > 0 ? [{ name: names[i], chips }] : [];
+export function OrderLineBundle({ line, menu, pick, ...handlers }: Props) {
+  const products = line.parts.map((part) => findProduct(menu, part.productId));
+  if (products.length !== 2 || products.some((product) => !product)) return null;
+  const [first, second] = products as [NonNullable<typeof products[0]>, NonNullable<typeof products[1]>];
+  const names = [pick(first.name), pick(second.name)];
+  const rows = line.parts.flatMap((part, index) => {
+    const product = index === 0 ? first : second;
+    const size = product.sizes.find((item) => item.id === part.sizeId);
+    const chips = [
+      ...(size ? [pick(size.name)] : []),
+      ...part.addOnIds.flatMap((id) => {
+        const addOn = product.addOns.find((item) => item.id === id);
+        return addOn ? [pick(addOn.name)] : [];
+      }),
+    ];
+    return chips.length > 0 ? [{ name: names[index], chips }] : [];
   });
+
   return (
     <OrderLineFrame
       line={line}
       title={names.join(" + ")}
       thumb={
         <span className="flex size-16 shrink-0 gap-1">
-          <Img productImage={items[0].image} categoryId={items[0].categoryId} className="h-full flex-1 rounded-md" />
-          <Img productImage={items[1].image} categoryId={items[1].categoryId} className="h-full flex-1 rounded-md" />
+          <Img image={first.image} className="h-full flex-1 rounded-md" />
+          <Img image={second.image} className="h-full flex-1 rounded-md" />
         </span>
       }
-      details={
-        rows.length > 0 ? (
-          <span className="flex flex-col gap-1">
-            {rows.map((r, i) => (
-              <span key={i} className="flex flex-wrap items-center gap-1">
-                <span className="text-caption font-medium text-navy/65">{r.name}</span>
-                {r.chips.map((c, j) => (
-                  <Chip key={j} compact>
-                    {c}
-                  </Chip>
-                ))}
-              </span>
-            ))}
-          </span>
-        ) : null
-      }
-      unit={lineUnitPrice(line, db.productsById, db.pairingsById, db.addOnsById)}
-      regular={lineRegularPrice(line, db.productsById, db.pairingsById, db.addOnsById)}
-      {...handlers}
+      details={rows.length > 0 ? (
+        <span className="flex flex-col gap-1">
+          {rows.map((row, index) => (
+            <span key={index} className="flex flex-wrap items-center gap-1">
+              <span className="text-caption font-medium text-navy/65">{row.name}</span>
+              {row.chips.map((chip, chipIndex) => <Chip key={chipIndex} compact>{chip}</Chip>)}
+            </span>
+          ))}
+        </span>
+      ) : null}
+      unit={lineUnitPrice(line, menu)}
+      regular={lineRegularPrice(line, menu)}
+      onEdit={(value) => handlers.onEdit(value as Line)}
+      onSetQty={(value, qty) => handlers.onSetQty(value as Line, qty)}
+      onRemove={(value) => handlers.onRemove(value as Line)}
     />
   );
 }

@@ -4,7 +4,6 @@ const DISMISS_DISTANCE = 150;
 const FLICK_DISTANCE = 60;
 const FLICK_SPEED = 0.6;
 
-/** Drag-to-dismiss from a sheet's handle bar: past a distance, or a fast enough flick, dismisses it. */
 export function useSheetDrag(onDismiss: () => void) {
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);

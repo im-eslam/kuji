@@ -41,7 +41,7 @@ export function SignaturesSection({ items, title, sub, pick, onOpen, sectionRef 
       <SectionHead title={title} sub={sub} />
       <div ref={rail} onScroll={onScroll} className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 scroll-ps-4">
         {items.map((item, i) => (
-          <SignatureCard key={item.id} item={item} name={pick(item.name)} desc={pick(item.desc)} onPress={onOpen} priority={i === 0} />
+          <SignatureCard key={item.id} item={item} name={pick(item.name)} desc={pick(item.description)} onPress={onOpen} priority={i === 0} />
         ))}
       </div>
       <div className="flex justify-center gap-2" aria-hidden="true">

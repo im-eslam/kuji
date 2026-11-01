@@ -31,11 +31,11 @@ export function SearchOverlay({ isOpen, onGoToSection }: Props) {
   const locale = useLocale();
   const pick = (text: { en: string; ar: string }) => text[locale];
   const t = useStrings(strings);
-  const { db, close, openItem, openOffer } = useMenuState();
+  const { menu, close, openItem, openOffer } = useMenuState();
   const [q, setQ] = useState("");
   // The input updates at once; the result list follows on the next idle frame, so typing never waits on rendering rows.
   const dq = useDeferredValue(q);
-  const res = useMemo(() => searchMenu(db, dq, pick), [db, dq, pick]);
+  const res = useMemo(() => searchMenu(menu, dq, pick), [menu, dq, pick]);
   const total = res.categories.length + res.pairings.length + res.items.length;
   const hasQuery = dq.trim().length > 0;
 
@@ -78,7 +78,7 @@ export function SearchOverlay({ isOpen, onGoToSection }: Props) {
                   <SearchResultCategoryRow
                     key={category.id}
                     name={pick(category.name)}
-                    count={db.productsByCategory.get(category.id)?.length ?? 0}
+                    count={category.products.length}
                     onPress={() => {
                       close();
                       window.setTimeout(() => onGoToSection(category.id), 0);
@@ -104,7 +104,7 @@ export function SearchOverlay({ isOpen, onGoToSection }: Props) {
               <section>
                 <SearchGroupHeading>{t.groupItems}</SearchGroupHeading>
                 {res.items.map((item) => (
-                  <SearchResultRow key={item.id} item={item} name={pick(item.name)} desc={pick(item.desc)} onPress={openItem} />
+                  <SearchResultRow key={item.id} item={item} name={pick(item.name)} desc={pick(item.description)} onPress={openItem} />
                 ))}
               </section>
             )}

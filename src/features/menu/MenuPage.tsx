@@ -9,7 +9,7 @@ import { useMenu } from "./data/useMenu";
 import { MenuStateProvider, useMenuState } from "./hooks/useMenuState";
 import { useScrollSpy } from "./hooks/useScrollSpy";
 import { strings } from "./strings";
-import type { MenuDb } from "./types";
+import type { MenuResponse } from "./types";
 
 // ==== Loading & error states ====
 
@@ -51,15 +51,15 @@ function ErrorState({ code, onRetry }: { code: string | null; onRetry: () => voi
 // ==== Shell ====
 
 function MenuBody() {
-  const { db, announcement } = useMenuState();
+  const { menu, announcement } = useMenuState();
 
   const ids = useMemo(() => {
     const list: string[] = [];
-    if (db.signatures.length > 0) list.push("signatures");
-    if (db.pairings.length > 0) list.push("pairings");
-    for (const category of db.categories) list.push(category.id);
+    if (menu.signatures.length > 0) list.push("signatures");
+    if (menu.pairings.length > 0) list.push("pairings");
+    for (const category of menu.categories) list.push(category.id);
     return list;
-  }, [db]);
+  }, [menu]);
   const scrollSpy = useScrollSpy(ids);
 
   return (
@@ -77,9 +77,9 @@ function MenuBody() {
   );
 }
 
-function MenuShell({ db }: { db: MenuDb }) {
+function MenuShell({ menu }: { menu: MenuResponse }) {
   return (
-    <MenuStateProvider db={db}>
+    <MenuStateProvider menu={menu}>
       <MenuBody />
     </MenuStateProvider>
   );
@@ -91,5 +91,5 @@ export function MenuPage() {
   const menu = useMenu();
   if (menu.status === "loading") return <LoadingSkeleton />;
   if (menu.status === "error") return <ErrorState code={menu.errorCode} onRetry={menu.retry} />;
-  return <MenuShell db={menu.db} />;
+  return <MenuShell menu={menu.menu} />;
 }

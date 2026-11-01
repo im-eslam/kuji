@@ -1,6 +1,8 @@
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { defaultSizeId } from "../lib/pricing";
 import type { AddOn, OrderLinePart, Product } from "../types";
+
+const EMPTY_ADD_ONS: AddOn[] = [];
 
 export interface ItemOptionsState {
   showSize: boolean;
@@ -16,58 +18,92 @@ export interface ItemOptionsState {
 }
 
 export function useItemOptions(
-  product: Product,
-  addOnsForProduct: AddOn[],
+  product: Product | null,
   initial?: { sizeId?: string; addOnIds: string[] },
   resetKey?: string,
 ): ItemOptionsState {
-  const baristaAddOnIds = product.baristaWay?.addOnIds ?? [];
-  const [sizeId, setSizeId] = useState(initial?.sizeId ?? defaultSizeId(product));
+  const addOns = product?.addOns ?? EMPTY_ADD_ONS;
+  const baristaAddOnIds = useMemo(
+    () => product?.baristaWay?.addOns.map((addOn) => addOn.id) ?? [],
+    [product?.baristaWay?.addOns],
+  );
+  const [sizeId, setSizeId] = useState(
+    initial?.sizeId ?? (product ? defaultSizeId(product) : undefined),
+  );
   const [addOnIds, setAddOnIds] = useState<string[]>(initial?.addOnIds ?? []);
   const [baristaOn, setBaristaOn] = useState(
-    () => baristaAddOnIds.length > 0 && baristaAddOnIds.every((id) => (initial?.addOnIds ?? []).includes(id)),
+    () =>
+      baristaAddOnIds.length > 0 &&
+      baristaAddOnIds.every((id) => (initial?.addOnIds ?? []).includes(id)),
   );
 
   useLayoutEffect(() => {
     if (!resetKey) return;
-    setSizeId(initial?.sizeId ?? defaultSizeId(product));
-    setAddOnIds(initial?.addOnIds ?? []);
-    setBaristaOn(baristaAddOnIds.length > 0 && baristaAddOnIds.every((id) => (initial?.addOnIds ?? []).includes(id)));
+    setTimeout(() => {
+      setSizeId(
+        initial?.sizeId ?? (product ? defaultSizeId(product) : undefined),
+      );
+      setAddOnIds(initial?.addOnIds ?? []);
+      setBaristaOn(
+        baristaAddOnIds.length > 0 &&
+          baristaAddOnIds.every((id) => (initial?.addOnIds ?? []).includes(id)),
+      );
+    }, 0);
   }, [resetKey]);
 
-  const toggleAddOn = (id: string) => {
-    setAddOnIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  const toggleAddOn = useCallback((id: string) => {
+    setAddOnIds((ids) =>
+      ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id],
+    );
     if (baristaOn && baristaAddOnIds.includes(id)) setBaristaOn(false);
-  };
+  }, [baristaOn, baristaAddOnIds]);
 
-  const toggleBarista = () => {
+  const toggleBarista = useCallback(() => {
     setBaristaOn((on) => {
       const next = !on;
       setAddOnIds((ids) =>
-        next ? Array.from(new Set([...ids, ...baristaAddOnIds])) : ids.filter((id) => !baristaAddOnIds.includes(id)),
+        next
+          ? Array.from(new Set([...ids, ...baristaAddOnIds]))
+          : ids.filter((id) => !baristaAddOnIds.includes(id)),
       );
       return next;
     });
-  };
+  }, [baristaAddOnIds]);
 
   return useMemo(
     () => ({
-      showSize: product.sizes.length > 0,
+      showSize: (product?.sizes.length ?? 0) > 0,
       showBarista: baristaAddOnIds.length > 0,
-      showAddOns: addOnsForProduct.length > 0,
+      showAddOns: addOns.length > 0,
       sizeId,
       setSizeId,
       addOnIds,
       toggleAddOn,
       baristaOn,
       toggleBarista,
-      addOns: addOnsForProduct,
+      addOns,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [product, addOnsForProduct, sizeId, addOnIds, baristaOn],
+    [
+      product,
+      addOns,
+      baristaAddOnIds,
+      sizeId,
+      setSizeId,
+      addOnIds,
+      toggleAddOn,
+      baristaOn,
+      toggleBarista,
+    ],
   );
 }
 
-export function partFromOptions(product: Product, opts: ItemOptionsState): OrderLinePart {
-  return { productId: product.id, sizeId: opts.showSize ? opts.sizeId : undefined, addOnIds: opts.addOnIds };
+export function partFromOptions(
+  product: Product,
+  opts: ItemOptionsState,
+): OrderLinePart {
+  return {
+    productId: product.id,
+    sizeId: opts.showSize ? opts.sizeId : undefined,
+    addOnIds: opts.addOnIds,
+  };
 }

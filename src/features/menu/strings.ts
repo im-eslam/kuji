@@ -11,7 +11,8 @@ const en = {
   oftenOrdered: "Often ordered with",
   updateOrder: "Update order",
   addToOrder: "Add to order",
-  showAll: (category: string, count: number) => `Show all ${category} (${count})`,
+  showAll: (category: string, count: number) =>
+    `Show all ${category} (${count})`,
   saveChip: (price: string) => `Save ${price}`,
   clearQuestion: "Clear your whole order?",
   keepOrder: "Keep order",
@@ -40,7 +41,8 @@ const en = {
   quickAdded: (n: number) => `+${n}`,
   loadingMenu: "Loading the menu…",
   errorTitle: "Something went wrong",
-  errorNetwork: "Unable to reach the server. Check your connection and try again.",
+  errorNetwork:
+    "Unable to reach the server. Check your connection and try again.",
   errorTimeout: "The request took too long. Please try again.",
   errorServer: "We couldn't load the menu right now. Please try again shortly.",
   errorGeneric: "Something went wrong. Please try again.",
@@ -57,7 +59,8 @@ const en = {
   a11yQuickAdd: (title: string) => `Add ${title}`,
   a11yAdded: (title: string) => `${title} added to your order`,
   a11yOrderUpdated: "Order updated",
-  a11yViewOrder: (n: number, price: string) => `View order, ${n} items, ${price}`,
+  a11yViewOrder: (n: number, price: string) =>
+    `View order, ${n} items, ${price}`,
 };
 
 const ar: typeof en = {

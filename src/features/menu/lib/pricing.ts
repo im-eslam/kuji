@@ -1,98 +1,158 @@
-import type { AddOn, OrderLine, OrderLinePart, Pairing, Product } from "../types";
+import { findPairing, findProduct } from "./catalog";
+import type {
+  MenuResponse,
+  OrderLine,
+  OrderLinePart,
+  Pairing,
+  Product,
+} from "../types";
 
-// ==== Sizes ====
-
-/** The first size by sort order, or undefined when the product has no sizes (and so no size picker). */
 export function defaultSizeId(product: Product): string | undefined {
   return product.sizes[0]?.id;
 }
 
-/** The full standalone price for a size, or the product's base price when it has no sizes. There is no upcharge. */
-export function basePriceFor(product: Product, sizeId: string | undefined): number {
-  if (sizeId) {
-    const match = product.sizes.find((s) => s.id === sizeId);
-    if (match) return match.price;
-  }
-  return product.price;
+export function currentPriceFor(product: Product, sizeId?: string): number {
+  return (
+    product.sizes.find((size) => size.id === sizeId)?.pricing.current ??
+    product.pricing.current
+  );
 }
 
-/** Rounded to whole EGP. Discounts apply to the base/size price only, never to add-ons. */
-export function discountedBasePrice(product: Product, base: number): number {
-  const discount = product.discount;
-  if (!discount) return base;
-  if (discount.type === "percent") return Math.max(0, Math.round(base * (1 - discount.value / 100)));
-  return Math.max(0, Math.round(base - discount.value));
+export function regularPriceFor(
+  product: Product,
+  sizeId?: string,
+): number | null {
+  const size = product.sizes.find((item) => item.id === sizeId);
+  return size ? size.pricing.regular : product.pricing.regular;
 }
 
-function addOnsTotal(addOnIds: string[], addOnsById: Map<string, AddOn>): number {
-  return addOnIds.reduce((sum, id) => sum + (addOnsById.get(id)?.price ?? 0), 0);
+function addOnsTotal(product: Product, addOnIds: string[]): number {
+  return addOnIds.reduce(
+    (sum, id) =>
+      sum + (product.addOns.find((addOn) => addOn.id === id)?.price ?? 0),
+    0,
+  );
 }
 
-/** What one unit of this configuration costs now (discount applied, add-ons never discounted). */
-export function partUnitPrice(product: Product, part: OrderLinePart, addOnsById: Map<string, AddOn>): number {
-  const base = basePriceFor(product, part.sizeId);
-  return discountedBasePrice(product, base) + addOnsTotal(part.addOnIds, addOnsById);
+export function partUnitPrice(product: Product, part: OrderLinePart): number {
+  return (
+    currentPriceFor(product, part.sizeId) + addOnsTotal(product, part.addOnIds)
+  );
 }
 
-/** The regular (pre-discount) unit price, for the struck-through price. Null when there is no discount to show. */
-export function partRegularPrice(product: Product, part: OrderLinePart, addOnsById: Map<string, AddOn>): number | null {
-  if (!product.discount) return null;
-  const base = basePriceFor(product, part.sizeId);
-  return base + addOnsTotal(part.addOnIds, addOnsById);
+export function partRegularPrice(
+  product: Product,
+  part: OrderLinePart,
+): number | null {
+  const regular = regularPriceFor(product, part.sizeId);
+  return regular === null
+    ? null
+    : regular + addOnsTotal(product, part.addOnIds);
 }
 
-/** A bundle's current unit price: bundlePrice replaces the sum of the regular prices, add-ons are added on top. */
-export function bundleUnitPrice(pairing: Pairing, parts: [OrderLinePart, OrderLinePart], addOnsById: Map<string, AddOn>): number {
-  const addOns = parts[0].addOnIds.concat(parts[1].addOnIds);
-  return pairing.bundlePrice + addOnsTotal(addOns, addOnsById);
+export function bundleUnitPrice(
+  pairing: Pairing,
+  parts: [OrderLinePart, OrderLinePart],
+): number {
+  const sizeAdjustments = parts.reduce((sum, part, index) => {
+    const product = pairing.items[index];
+    return (
+      sum + currentPriceFor(product, part.sizeId) - product.pricing.current
+    );
+  }, 0);
+  return (
+    pairing.pricing.current +
+    sizeAdjustments +
+    addOnsTotal(pairing.items[0], parts[0].addOnIds) +
+    addOnsTotal(pairing.items[1], parts[1].addOnIds)
+  );
 }
 
-export function bundleRegularPrice(pairing: Pairing, parts: [OrderLinePart, OrderLinePart], addOnsById: Map<string, AddOn>): number {
-  const addOns = parts[0].addOnIds.concat(parts[1].addOnIds);
-  return pairing.regularPrice + addOnsTotal(addOns, addOnsById);
+export function bundleRegularPrice(
+  pairing: Pairing,
+  parts: [OrderLinePart, OrderLinePart],
+): number | null {
+  if (pairing.pricing.regular === null) return null;
+  const sizeAdjustments = parts.reduce((sum, part, index) => {
+    const product = pairing.items[index];
+    const selectedSize = product.sizes.find((size) => size.id === part.sizeId);
+    const selectedRegular = selectedSize
+      ? (selectedSize.pricing.regular ?? selectedSize.pricing.current)
+      : (product.pricing.regular ?? product.pricing.current);
+    const defaultRegular = product.pricing.regular ?? product.pricing.current;
+    return sum + selectedRegular - defaultRegular;
+  }, 0);
+  return (
+    pairing.pricing.regular +
+    sizeAdjustments +
+    addOnsTotal(pairing.items[0], parts[0].addOnIds) +
+    addOnsTotal(pairing.items[1], parts[1].addOnIds)
+  );
 }
 
-// ==== Order lines ====
-
-/** A deterministic signature of kind + ref + exact configuration, so identical lines merge instead of duplicating. */
-export function lineKey(kind: "item" | "bundle", refId: string, parts: OrderLinePart[]): string {
-  const partKey = (p: OrderLinePart) => `${p.productId}:${p.sizeId ?? ""}:${[...p.addOnIds].sort().join(",")}`;
+export function lineKey(
+  kind: "item" | "bundle",
+  refId: string,
+  parts: OrderLinePart[],
+): string {
+  const partKey = (part: OrderLinePart) =>
+    `${part.productId}:${part.sizeId ?? ""}:${[...part.addOnIds].sort().join(",")}`;
   return `${kind}:${refId}:${parts.map(partKey).join("|")}`;
 }
 
-export function makeLine(kind: "item" | "bundle", refId: string, parts: OrderLinePart[], qty: number): OrderLine {
-  return { key: lineKey(kind, refId, parts), kind, refId, parts, qty };
+export function makeLine(
+  kind: "item",
+  refId: string,
+  parts: [OrderLinePart],
+  qty: number,
+): OrderLine;
+export function makeLine(
+  kind: "bundle",
+  refId: string,
+  parts: [OrderLinePart, OrderLinePart],
+  qty: number,
+): OrderLine;
+export function makeLine(
+  kind: "item" | "bundle",
+  refId: string,
+  parts: [OrderLinePart] | [OrderLinePart, OrderLinePart],
+  qty: number,
+): OrderLine {
+  return {
+    key: lineKey(kind, refId, parts),
+    kind,
+    refId,
+    parts,
+    qty,
+  } as OrderLine;
 }
 
-/** This line's unit price now, resolving against the catalog. */
 export function lineUnitPrice(
   line: OrderLine,
-  productsById: Map<string, Product>,
-  pairingsById: Map<string, Pairing>,
-  addOnsById: Map<string, AddOn>,
+  menu: MenuResponse,
 ): number | null {
   if (line.kind === "item") {
-    const product = productsById.get(line.parts[0].productId);
-    return product ? partUnitPrice(product, line.parts[0], addOnsById) : null;
+    const product = findProduct(menu, line.parts[0].productId);
+    return product ? partUnitPrice(product, line.parts[0]) : null;
   }
-  const pairing = pairingsById.get(line.refId);
+  const pairing = findPairing(menu, line.refId);
   if (!pairing) return null;
-  return bundleUnitPrice(pairing, [line.parts[0], line.parts[1]], addOnsById);
+  return bundleUnitPrice(pairing, [line.parts[0], line.parts[1]]);
 }
 
 export function lineRegularPrice(
   line: OrderLine,
-  productsById: Map<string, Product>,
-  pairingsById: Map<string, Pairing>,
-  addOnsById: Map<string, AddOn>,
+  menu: MenuResponse,
 ): number | null {
   if (line.kind === "item") {
-    const product = productsById.get(line.parts[0].productId);
-    return product ? partRegularPrice(product, line.parts[0], addOnsById) : null;
+    const product = findProduct(menu, line.parts[0].productId);
+    return product ? partRegularPrice(product, line.parts[0]) : null;
   }
-  const pairing = pairingsById.get(line.refId);
+  const pairing = findPairing(menu, line.refId);
   if (!pairing) return null;
-  const regular = bundleRegularPrice(pairing, [line.parts[0], line.parts[1]], addOnsById);
-  const unit = bundleUnitPrice(pairing, [line.parts[0], line.parts[1]], addOnsById);
-  return regular > unit ? regular : null;
+  const regular = bundleRegularPrice(pairing, [line.parts[0], line.parts[1]]);
+  return regular !== null &&
+    regular > bundleUnitPrice(pairing, [line.parts[0], line.parts[1]])
+    ? regular
+    : null;
 }

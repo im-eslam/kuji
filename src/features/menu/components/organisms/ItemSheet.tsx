@@ -3,9 +3,9 @@ import { useLocale, useStrings } from "@/shared/i18n";
 import { LIMITS, QUICK_ADD_FLASH_MS } from "../../config";
 import { partFromOptions, useItemOptions } from "../../hooks/useItemOptions";
 import { useMenuState } from "../../hooks/useMenuState";
-import { makeLine, partUnitPrice } from "../../lib/pricing";
+import { findProduct, isInStock } from "../../lib/catalog";
+import { defaultSizeId, makeLine, partUnitPrice } from "../../lib/pricing";
 import { strings } from "../../strings";
-import type { Product } from "../../types";
 import { Badge } from "../atoms/Badge";
 import { Img } from "../atoms/Image";
 import { AddToOrderBar } from "../molecules/AddToOrderBar";
@@ -28,14 +28,12 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
   const locale = useLocale();
   const pick = pickFor(locale);
   const t = useStrings(strings);
-  const { db, lines, add, updateLine, announce, swapToOrder, close } = useMenuState();
-  const item = db.productsById.get(itemId) as Product | undefined;
-  const editing = editKey ? lines.find((l) => l.key === editKey) : undefined;
+  const { menu, lines, add, updateLine, announce, swapToOrder, close } = useMenuState();
+  const item = findProduct(menu, itemId);
+  const editing = editKey ? lines.find((line) => line.key === editKey) : undefined;
   const initial = editing?.parts[0];
-  const addOnsForProduct = item ? (db.addOnsByProduct.get(item.id) ?? []) : [];
   const opts = useItemOptions(
-    item ?? ({} as Product),
-    addOnsForProduct,
+    item ?? null,
     initial && { sizeId: initial.sizeId, addOnIds: initial.addOnIds },
     isOpen ? `${itemId}:${editKey ?? "new"}` : undefined,
   );
@@ -52,13 +50,14 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
 
   if (!item) return null;
 
+  const inStock = isInStock(item);
   const part = partFromOptions(item, opts);
-  const unit = partUnitPrice(item, part, db.addOnsById);
+  const unit = partUnitPrice(item, part);
   const total = unit * qty;
   const name = pick(item.name);
 
   const submit = () => {
-    if (!item.inStock) return;
+    if (!inStock) return;
     const line = makeLine("item", item.id, [part], qty);
     if (editing) {
       updateLine(editing.key, { ...line, qty });
@@ -71,77 +70,55 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
     }
   };
 
-  const quickAdd = (other: Product) => {
-    if (!other.inStock) return;
-    add(makeLine("item", other.id, [{ productId: other.id, sizeId: undefined, addOnIds: [] }], 1));
-    setAdded((a) => ({ ...a, [other.id]: (a[other.id] ?? 0) + 1 }));
-    setFlash(other.id);
-    window.setTimeout(() => setFlash((f) => (f === other.id ? null : f)), QUICK_ADD_FLASH_MS);
-    announce(t.a11yAdded(pick(other.name)));
+  const quickAdd = (previewId: string) => {
+    const product = findProduct(menu, previewId);
+    if (!product || !isInStock(product)) return;
+    const part = { productId: product.id, sizeId: defaultSizeId(product), addOnIds: [] };
+    add(makeLine("item", product.id, [part], 1));
+    setAdded((counts) => ({ ...counts, [product.id]: (counts[product.id] ?? 0) + 1 }));
+    setFlash(product.id);
+    window.setTimeout(() => setFlash((current) => (current === product.id ? null : current)), QUICK_ADD_FLASH_MS);
+    announce(t.a11yAdded(pick(product.name)));
   };
 
   const label = editing ? t.updateOrder : t.addToOrder;
-  const oftenOrdered = item.oftenOrderedWith.flatMap((id) => {
-    const p = db.productsById.get(id);
-    return p ? [p] : [];
-  });
+  const oftenOrdered = item.oftenOrderedWith;
 
   return (
     <BottomSheet
       isOpen={isOpen}
       label={name}
       onClose={editing ? () => swapToOrder(editing.key) : close}
-      footer={item.inStock ? (
-        <AddToOrderBar
-          title={name}
-          qty={qty}
-          max={editing ? LIMITS.lineQty : LIMITS.sheetQty}
-          onQty={setQty}
-          label={label}
-          total={total}
-          onSubmit={submit}
-        />
+      footer={inStock ? (
+        <AddToOrderBar title={name} qty={qty} max={editing ? LIMITS.lineQty : LIMITS.sheetQty} onQty={setQty} label={label} total={total} onSubmit={submit} />
       ) : undefined}
     >
       <div className="flex flex-col gap-6">
         <div className="px-4">
           <div className="relative">
-            <Img
-              productImage={item.image}
-              categoryId={item.categoryId}
-              alt={name}
-              className={`aspect-4/3 w-full rounded-lg ${item.inStock ? "" : "grayscale"}`}
-            />
-            {!item.inStock && (
-              <span className="absolute end-2 top-2">
-                <Badge kind="outOfStock" />
-              </span>
-            )}
+            <Img image={item.image} alt={name} className={`aspect-4/3 w-full rounded-lg ${inStock ? "" : "grayscale"}`} />
+            {!inStock && <span className="absolute end-2 top-2"><Badge kind="outOfStock" /></span>}
           </div>
         </div>
         <div className="flex flex-col gap-2 px-4">
-          {item.inStock && item.badge && (
-            <div>
-              <Badge kind={item.badge} />
-            </div>
-          )}
+          {inStock && item.badge && <div><Badge kind={item.badge} /></div>}
           <SheetTitle>{name}</SheetTitle>
-          <p className="text-small font-medium text-navy/65">{pick(item.desc)}</p>
+          <p className="text-small font-medium text-navy/65">{pick(item.description)}</p>
         </div>
-        <OptionBlock
-          item={item}
-          name={name}
-          opts={opts}
-          pick={pick}
-          pickSize={(id) => pick(db.sizesById.get(id)?.name ?? { en: id, ar: id })}
-          discountedSizes
-        />
+        <OptionBlock item={item} name={name} opts={opts} pick={pick} />
         {!editing && oftenOrdered.length > 0 && (
           <section aria-label={t.oftenOrdered} className="flex flex-col gap-2">
             <h3 className="px-4 text-body font-bold">{t.oftenOrdered}</h3>
             <div className="no-scrollbar flex gap-2 overflow-x-auto px-4">
-              {oftenOrdered.map((o) => (
-                <OftenOrderedCard key={o.id} item={o} name={pick(o.name)} addedCount={added[o.id] ?? 0} done={flash === o.id} onQuickAdd={() => quickAdd(o)} />
+              {oftenOrdered.map((other) => (
+                <OftenOrderedCard
+                  key={other.id}
+                  item={other}
+                  name={pick(other.name)}
+                  addedCount={added[other.id] ?? 0}
+                  done={flash === other.id}
+                  onQuickAdd={() => quickAdd(other.id)}
+                />
               ))}
             </div>
           </section>

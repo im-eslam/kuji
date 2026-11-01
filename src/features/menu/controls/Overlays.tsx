@@ -8,9 +8,8 @@ interface Props {
   onGoToSection: (id: string) => void;
 }
 
-/** The order bar plus every sheet/overlay, switched on the single `overlay` state machine. */
 export function MenuOverlays({ activeId, onGoToSection }: Props) {
-  const { db, overlay, close } = useMenuState();
+  const { menu, overlay, close } = useMenuState();
   const locale = useLocale();
   const pick = (text: { en: string; ar: string }) => text[locale];
   const lastItem = useRef<{ itemId: string; editKey?: string } | null>(null);
@@ -18,14 +17,13 @@ export function MenuOverlays({ activeId, onGoToSection }: Props) {
   if (overlay.type === "item") lastItem.current = { itemId: overlay.itemId, editKey: overlay.editKey };
 
   const categories = useMemo(
-    () =>
-      db.categories.map((category) => ({
-        category,
-        label: pick(category.name),
-        count: db.productsByCategory.get(category.id)?.length ?? 0,
-      })),
+    () => menu.categories.map((category) => ({
+      category,
+      label: pick(category.name),
+      count: category.products.length,
+    })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [db, locale],
+    [menu, locale],
   );
 
   return (
@@ -38,9 +36,7 @@ export function MenuOverlays({ activeId, onGoToSection }: Props) {
           editKey={overlay.type === "item" ? overlay.editKey : lastItem.current.editKey}
         />
       )}
-      {overlay.type === "offer" && (
-        <OfferSheet isOpen offerId={overlay.offerId} editKey={overlay.editKey} />
-      )}
+      {overlay.type === "offer" && <OfferSheet isOpen offerId={overlay.offerId} editKey={overlay.editKey} />}
       <OrderSheet isOpen={overlay.type === "order"} />
       <CategorySheet isOpen={overlay.type === "categories"} onClose={close} categories={categories} activeId={activeId} onPick={onGoToSection} />
       <SearchOverlay isOpen={overlay.type === "search"} onGoToSection={onGoToSection} />

@@ -4,8 +4,6 @@ class ReviewsController extends Controller
 {
     protected const FEATURE = 'reviews';
 
-    // ---- public ----
-
     public function submit(): void
     {
         $cfg    = $this->settings();
@@ -38,8 +36,6 @@ class ReviewsController extends Controller
 
         Http::json(['ok' => true], 201);
     }
-
-    // ---- admin ----
 
     public function index(): void
     {

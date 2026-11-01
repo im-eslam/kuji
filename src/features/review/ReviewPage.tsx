@@ -18,16 +18,12 @@ import { GOOGLE_REVIEW_URL, LIMITS, REVIEW_API } from "./config";
 import { strings } from "./strings";
 import { useSheetDrag } from "./hooks/useSheetDrag";
 
-// ==== Constants ====
-
 const EMPTY_FORM: ReviewFormValues = {
   message: "",
   name: "",
   contact: "",
   website: "",
 };
-
-// ==== Styles ====
 
 const styles = {
   overlay:
@@ -50,8 +46,6 @@ const styles = {
   step: "animate-reveal-in",
   choices: "flex flex-col gap-3 pb-2",
 };
-
-// ==== Page ====
 
 export function ReviewPage() {
   const isOpen = usePath() === ROUTES.review;
@@ -92,8 +86,6 @@ export function ReviewPage() {
     </ModalOverlay>
   );
 }
-
-// ==== Content ====
 
 type Step = "choose" | "note" | "sent";
 

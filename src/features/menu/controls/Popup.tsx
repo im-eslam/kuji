@@ -6,9 +6,9 @@ import { strings } from "../strings";
 
 /** Waits for the popup image to preload and its delay to pass, then opens it only if nothing else is open. */
 export function Popup() {
-  const { db, overlay } = useMenuState();
+  const { menu, overlay } = useMenuState();
   const t = useStrings(strings);
-  const { enabled, image, delaySeconds } = db.popup;
+  const { enabled, image, delaySeconds } = menu.popup;
   const [ready, setReady] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const overlayType = useRef(overlay.type);

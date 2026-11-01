@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Tracks which registered section is most visible under the sticky header, and lets the header scroll to one. */
 export function useScrollSpy(ids: string[]) {
   const [activeId, setActiveId] = useState(ids[0] ?? "");
   const elements = useRef(new Map<string, HTMLElement>());
   const ratios = useRef(new Map<string, number>());
-  const idsKey = ids.join(",");
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -29,8 +26,7 @@ export function useScrollSpy(ids: string[]) {
     );
     elements.current.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey]);
+  }, [ids]);
 
   const register = useCallback(
     (id: string) => (el: HTMLElement | null) => {

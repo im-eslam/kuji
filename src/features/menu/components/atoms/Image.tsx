@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { resolveImage } from "../../lib/images";
+import { resolveProductImage } from "../../lib/images";
 
 interface Props {
-  productImage: string | null;
-  categoryId: string;
+  image: string | null;
   alt?: string;
   className?: string;
   /** Above the fold: fetch now, at high priority, instead of waiting for the lazy-load threshold. */
   priority?: boolean;
 }
 
-// One <img> when a photo is known; otherwise a plain placeholder gradient, with no extra request.
-export function Img({ productImage, categoryId, alt = "", className = "", priority }: Props) {
-  const url = resolveImage(productImage, categoryId);
+/** Displays this product's own image, or a neutral placeholder when it has no image. */
+export function Img({ image, alt = "", className = "", priority }: Props) {
+  const url = resolveProductImage(image);
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
 

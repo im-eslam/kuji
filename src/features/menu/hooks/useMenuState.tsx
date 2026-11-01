@@ -1,6 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+  type ReactNode,
+} from "react";
+import { allProducts, isInStock } from "../lib/catalog";
 import { lineUnitPrice } from "../lib/pricing";
-import type { MenuDb, OrderLine } from "../types";
+import type { MenuResponse, OrderLine } from "../types";
 
 // ==== Order reducer ====
 
@@ -10,12 +20,18 @@ type OrderAction =
   | { type: "setQty"; key: string; qty: number }
   | { type: "remove"; key: string }
   | { type: "clear" }
-  | { type: "prune"; validProductIds: Set<string> };
+  | {
+      type: "prune";
+      validProductIds: Set<string>;
+      validPairingIds: Set<string>;
+    };
 
 function mergeOrAdd(lines: OrderLine[], line: OrderLine): OrderLine[] {
-  const existing = lines.find((l) => l.key === line.key);
+  const existing = lines.find((item) => item.key === line.key);
   if (!existing) return [...lines, line];
-  return lines.map((l) => (l.key === line.key ? { ...l, qty: l.qty + line.qty } : l));
+  return lines.map((item) =>
+    item.key === line.key ? { ...item, qty: item.qty + line.qty } : item,
+  );
 }
 
 function orderReducer(lines: OrderLine[], action: OrderAction): OrderLine[] {
@@ -23,20 +39,31 @@ function orderReducer(lines: OrderLine[], action: OrderAction): OrderLine[] {
     case "add":
       return mergeOrAdd(lines, action.line);
     case "update": {
-      if (action.line.key === action.oldKey) {
-        return lines.map((l) => (l.key === action.oldKey ? action.line : l));
-      }
-      const withoutOld = lines.filter((l) => l.key !== action.oldKey);
-      return mergeOrAdd(withoutOld, action.line);
+      if (action.line.key === action.oldKey)
+        return lines.map((line) =>
+          line.key === action.oldKey ? action.line : line,
+        );
+      return mergeOrAdd(
+        lines.filter((line) => line.key !== action.oldKey),
+        action.line,
+      );
     }
     case "setQty":
-      return lines.map((l) => (l.key === action.key ? { ...l, qty: action.qty } : l));
+      return lines.map((line) =>
+        line.key === action.key ? { ...line, qty: action.qty } : line,
+      );
     case "remove":
-      return lines.filter((l) => l.key !== action.key);
+      return lines.filter((line) => line.key !== action.key);
     case "clear":
       return [];
     case "prune":
-      return lines.filter((l) => l.parts.every((p) => action.validProductIds.has(p.productId)));
+      return lines.filter(
+        (line) =>
+          line.parts.every((part) =>
+            action.validProductIds.has(part.productId),
+          ) &&
+          (line.kind !== "bundle" || action.validPairingIds.has(line.refId)),
+      );
     default:
       return lines;
   }
@@ -53,7 +80,7 @@ export type Overlay =
   | { type: "search" };
 
 interface MenuStateValue {
-  db: MenuDb;
+  menu: MenuResponse;
   lines: OrderLine[];
   count: number;
   subtotal: number;
@@ -79,34 +106,49 @@ interface MenuStateValue {
 
 const MenuStateCtx = createContext<MenuStateValue | null>(null);
 
-export function MenuStateProvider({ db, children }: { db: MenuDb; children: ReactNode }) {
+export function MenuStateProvider({
+  menu,
+  children,
+}: {
+  menu: MenuResponse;
+  children: ReactNode;
+}) {
   const [lines, dispatch] = useReducer(orderReducer, []);
   const [overlay, setOverlay] = useState<Overlay>({ type: "none" });
   const [announcement, setAnnouncement] = useState("");
   const [focusLineKey, setFocusLineKey] = useState<string | null>(null);
-  const dbRef = useRef(db);
-  dbRef.current = db;
 
-  // The order lives in memory only. If the catalog reloads and a product is gone, drop lines that reference it.
+  // Keep the in-memory order valid when a refreshed menu removes or disables a product.
   useEffect(() => {
-    dispatch({ type: "prune", validProductIds: new Set([...db.productsById.values()].filter((product) => product.inStock).map((product) => product.id)) });
-  }, [db]);
+    const validProductIds = new Set(
+      allProducts(menu)
+        .filter(isInStock)
+        .map((product) => product.id),
+    );
+    const validPairingIds = new Set(menu.pairings.map((pairing) => pairing.id));
+    dispatch({ type: "prune", validProductIds, validPairingIds });
+  }, [menu]);
 
   const subtotal = useMemo(
     () =>
-      lines.reduce((sum, line) => {
-        const unit = lineUnitPrice(line, db.productsById, db.pairingsById, db.addOnsById) ?? 0;
-        return sum + unit * line.qty;
-      }, 0),
-    [lines, db],
+      lines.reduce(
+        (sum, line) => sum + (lineUnitPrice(line, menu) ?? 0) * line.qty,
+        0,
+      ),
+    [lines, menu],
   );
-  const count = useMemo(() => lines.reduce((n, l) => n + l.qty, 0), [lines]);
-
-  const announce = useCallback((message: string) => setAnnouncement(message), []);
+  const count = useMemo(
+    () => lines.reduce((total, line) => total + line.qty, 0),
+    [lines],
+  );
+  const announce = useCallback(
+    (message: string) => setAnnouncement(message),
+    [],
+  );
 
   const value = useMemo<MenuStateValue>(
     () => ({
-      db,
+      menu,
       lines,
       count,
       subtotal,
@@ -124,7 +166,11 @@ export function MenuStateProvider({ db, children }: { db: MenuDb; children: Reac
       editLine: (line) =>
         setOverlay(
           line.kind === "item"
-            ? { type: "item", itemId: line.parts[0].productId, editKey: line.key }
+            ? {
+                type: "item",
+                itemId: line.parts[0].productId,
+                editKey: line.key,
+              }
             : { type: "offer", offerId: line.refId, editKey: line.key },
         ),
       swapToOrder: (focusKey) => {
@@ -137,14 +183,27 @@ export function MenuStateProvider({ db, children }: { db: MenuDb; children: Reac
       focusLineKey,
       clearFocusLine: () => setFocusLineKey(null),
     }),
-    [db, lines, count, subtotal, overlay, announcement, announce, focusLineKey],
+    [
+      menu,
+      lines,
+      count,
+      subtotal,
+      overlay,
+      announcement,
+      announce,
+      focusLineKey,
+    ],
   );
 
-  return <MenuStateCtx.Provider value={value}>{children}</MenuStateCtx.Provider>;
+  return (
+    <MenuStateCtx.Provider value={value}>{children}</MenuStateCtx.Provider>
+  );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMenuState(): MenuStateValue {
-  const ctx = useContext(MenuStateCtx);
-  if (!ctx) throw new Error("useMenuState must be used within MenuStateProvider");
-  return ctx;
+  const context = useContext(MenuStateCtx);
+  if (!context)
+    throw new Error("useMenuState must be used within MenuStateProvider");
+  return context;
 }

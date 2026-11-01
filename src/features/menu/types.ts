@@ -1,107 +1,20 @@
 import type { Localized } from "@/shared/i18n";
 
-// ==== Wire types (the shape returned by GET /menu) ====
-
 export type LocalizedText = Localized<string>;
-
-export interface WireCategory {
-  id: string;
-  name: LocalizedText;
-  desc: LocalizedText;
-  sort: number;
-}
-
-export interface WireSize {
-  id: string;
-  name: LocalizedText;
-  sort: number;
-}
-
-export interface WireBadge {
-  id: string;
-}
-
-export interface WireAddOn {
-  id: string;
-  name: LocalizedText;
-  price: number;
-  scope: string[];
-}
-
-export interface WireProductSize {
-  id: string;
-  price: number;
-}
-
-export interface WireDiscount {
-  type: "amount" | "percent";
-  value: number;
-}
-
-export interface WireBaristaWay {
-  addOns: string[];
-}
-
-export interface WireProduct {
-  id: string;
-  categoryId: string;
-  name: LocalizedText;
-  desc: LocalizedText;
-  price: number;
-  image: string | null;
-  sort: number;
-  sizes: WireProductSize[];
-  badges: string[];
-  discount: WireDiscount | null;
-  baristaWay: WireBaristaWay | null;
-  oftenOrderedWith: string[];
-  inStock: boolean;
-}
-
-export interface WirePairing {
-  id: string;
-  items: [string, string];
-  bundlePrice: number | null;
-}
-
-export interface WirePopup {
-  enabled: boolean;
-  image: string | null;
-  delaySeconds: number;
-}
-
-export interface WireMarketing {
-  signatures: string[];
-  pairings: WirePairing[];
-  popup: WirePopup;
-}
-
-export interface MenuDocument {
-  schemaVersion: number;
-  updatedAt: string;
-  categories: WireCategory[];
-  sizes: WireSize[];
-  badges: WireBadge[];
-  addOns: WireAddOn[];
-  products: WireProduct[];
-  marketing: WireMarketing;
-}
-
-// ==== Normalized models ====
-
 export type BadgeKind = "top" | "new";
+export type Availability = "in_stock" | "out_of_stock";
 
-export interface Category {
-  id: string;
-  name: LocalizedText;
-  desc: LocalizedText;
-  sort: number;
+export interface DisplayPrice {
+  current: number;
+  regular: number | null;
+  isDiscounted: boolean;
 }
 
-export interface SizeOption {
-  id: string;
-  name: LocalizedText;
-  sort: number;
+export interface PairingPrice {
+  current: number;
+  regular: number | null;
+  savings: number;
+  hasSavings: boolean;
 }
 
 export interface AddOn {
@@ -112,30 +25,41 @@ export interface AddOn {
 
 export interface ProductSize {
   id: string;
-  price: number;
+  name: LocalizedText;
+  sortOrder: number;
+  pricing: DisplayPrice;
 }
 
-export interface Product {
+export interface ProductPreview {
   id: string;
-  categoryId: string;
   name: LocalizedText;
-  desc: LocalizedText;
-  price: number;
+  description: LocalizedText;
   image: string | null;
-  inStock: boolean;
-  sizes: ProductSize[];
+  availability: Availability;
   badge: BadgeKind | null;
-  discount: WireDiscount | null;
-  baristaWay: { addOnIds: string[] } | null;
-  oftenOrderedWith: string[];
+  pricing: DisplayPrice;
+}
+
+export interface Product extends ProductPreview {
+  sortOrder: number;
+  sizes: ProductSize[];
+  addOns: AddOn[];
+  baristaWay: { addOns: AddOn[] } | null;
+  oftenOrderedWith: ProductPreview[];
+}
+
+export interface Category {
+  id: string;
+  name: LocalizedText;
+  description: LocalizedText;
+  sortOrder: number;
+  products: Product[];
 }
 
 export interface Pairing {
   id: string;
   items: [Product, Product];
-  bundlePrice: number;
-  regularPrice: number;
-  savings: number;
+  pricing: PairingPrice;
 }
 
 export interface PopupConfig {
@@ -144,21 +68,17 @@ export interface PopupConfig {
   delaySeconds: number;
 }
 
-export interface MenuDb {
+export interface MenuResponse {
+  schemaVersion: 2;
+  updatedAt: string;
+  currency: string;
   categories: Category[];
-  categoriesById: Map<string, Category>;
-  sizesById: Map<string, SizeOption>;
-  addOnsById: Map<string, AddOn>;
-  productsById: Map<string, Product>;
-  productsByCategory: Map<string, Product[]>;
-  addOnsByProduct: Map<string, AddOn[]>;
   signatures: Product[];
   pairings: Pairing[];
-  pairingsById: Map<string, Pairing>;
   popup: PopupConfig;
 }
 
-// ==== Order ====
+// ==== Customer order state ====
 
 export interface OrderLinePart {
   productId: string;
@@ -166,11 +86,12 @@ export interface OrderLinePart {
   addOnIds: string[];
 }
 
-export interface OrderLine {
-  /** Deterministic signature of kind + refId + parts, so identical configurations merge into one line. */
+interface OrderLineBase {
   key: string;
-  kind: "item" | "bundle";
   refId: string;
-  parts: OrderLinePart[];
   qty: number;
 }
+
+export type OrderLine =
+  | (OrderLineBase & { kind: "item"; parts: [OrderLinePart] })
+  | (OrderLineBase & { kind: "bundle"; parts: [OrderLinePart, OrderLinePart] });

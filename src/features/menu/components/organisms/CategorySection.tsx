@@ -49,7 +49,7 @@ export const CategorySection = memo(function CategorySection({ category, pillLab
       <div className="flex flex-col px-4">
         <div className="flex flex-col gap-3">
           {first.map((p) => (
-            <ListCard key={p.id} item={p} name={pick(p.name)} desc={pick(p.desc)} onPress={onOpen} />
+            <ListCard key={p.id} item={p} name={pick(p.name)} desc={pick(p.description)} onPress={onOpen} />
           ))}
         </div>
         {rest.length > 0 && (
@@ -59,7 +59,7 @@ export const CategorySection = memo(function CategorySection({ category, pillLab
                 {mountRest &&
                   rest.map((p, n) => (
                     <div key={p.id} style={{ "--i": Math.min(n, STAGGER_CAP) } as CSSProperties} className={all ? "stagger animate-reveal-in" : ""}>
-                      <ListCard item={p} name={pick(p.name)} desc={pick(p.desc)} onPress={onOpen} />
+                      <ListCard item={p} name={pick(p.name)} desc={pick(p.description)} onPress={onOpen} />
                     </div>
                   ))}
               </div>

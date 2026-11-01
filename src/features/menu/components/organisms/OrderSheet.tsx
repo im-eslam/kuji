@@ -21,7 +21,7 @@ export function OrderSheet({ isOpen }: Props) {
   const locale = useLocale();
   const pick = (text: { en: string; ar: string }) => text[locale];
   const t = useStrings(strings);
-  const { db, lines, count, subtotal, setQty, removeLine, editLine, clearOrder, announce, focusLineKey, clearFocusLine, close } =
+  const { menu, lines, count, subtotal, setQty, removeLine, editLine, clearOrder, announce, focusLineKey, clearFocusLine, close } =
     useMenuState();
   const [confirming, setConfirming] = useState(false);
   const clearWrap = useRef<HTMLDivElement>(null);
@@ -103,9 +103,9 @@ export function OrderSheet({ isOpen }: Props) {
         <div className="pt-4">
           {lines.map((line) =>
             line.kind === "item" ? (
-              <OrderLineItem key={line.key} line={line} db={db} pick={pick} onEdit={editLine} onSetQty={setLineQty} onRemove={remove} />
+              <OrderLineItem key={line.key} line={line} menu={menu} pick={pick} onEdit={editLine} onSetQty={setLineQty} onRemove={remove} />
             ) : (
-              <OrderLineBundle key={line.key} line={line} db={db} pick={pick} onEdit={editLine} onSetQty={setLineQty} onRemove={remove} />
+              <OrderLineBundle key={line.key} line={line} menu={menu} pick={pick} onEdit={editLine} onSetQty={setLineQty} onRemove={remove} />
             ),
           )}
         </div>
