@@ -50,7 +50,7 @@ export function OrderSheet({ isOpen }: Props) {
     <div className="relative">
       <div
         aria-hidden={confirming}
-        {...(confirming ? ({ inert: "" } as object) : {})}
+        {...(confirming ? ({ inert: true } as object) : {})}
         className={`flex flex-col gap-3 transition-opacity duration-200 ${confirming ? "opacity-0" : "opacity-100"}`}
       >
         <div className="flex items-baseline justify-between">
@@ -81,7 +81,7 @@ export function OrderSheet({ isOpen }: Props) {
 
   return (
     <BottomSheet isOpen={isOpen} label={t.yourOrder} onClose={close} footer={footer}>
-      <div className="flex min-h-12 items-center ps-4 pe-14">
+      <div className="flex min-h-12 items-center px-4">
         <div>
           <SheetTitle>{t.yourOrder}</SheetTitle>
           {!empty && (

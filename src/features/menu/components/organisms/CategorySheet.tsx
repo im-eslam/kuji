@@ -17,7 +17,7 @@ export function CategorySheet({ isOpen, onClose, categories, activeId, onPick }:
   const t = useStrings(strings);
   return (
     <BottomSheet isOpen={isOpen} label={t.categoriesTitle} onClose={onClose}>
-      <div className="flex min-h-12 items-center ps-4 pe-14">
+      <div className="flex min-h-12 items-center px-4">
         <SheetTitle>{t.categoriesTitle}</SheetTitle>
       </div>
       <div className="flex flex-col gap-1 px-4 pt-4">

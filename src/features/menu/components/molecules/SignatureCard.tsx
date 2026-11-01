@@ -23,7 +23,7 @@ export const SignatureCard = memo(function SignatureCard({ item, name, desc, onP
     <Button
       data-carousel-card
       onPress={() => onPress(item.id)}
-      className="group flex w-[42%] min-w-40 shrink-0 snap-start flex-col gap-3 rounded-lg border border-arctic bg-white p-3 text-start transition-[transform,background-color] duration-150 ease-out data-pressed:scale-[0.98] data-pressed:bg-mist xs:p-4"
+      className="group flex w-[72%] min-w-64 max-w-96 shrink-0 snap-start flex-col gap-3 rounded-lg border border-arctic bg-white p-3 text-start transition-[transform,background-color] duration-150 ease-out data-pressed:scale-[0.98] data-pressed:bg-mist xs:p-4"
     >
       <span className="relative block">
         <Img productImage={item.image} categoryId={item.categoryId} priority={priority} className="aspect-square w-full rounded-md" />

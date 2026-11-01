@@ -6,7 +6,6 @@ import { useMenuState } from "../../hooks/useMenuState";
 import { bundleUnitPrice, makeLine } from "../../lib/pricing";
 import { useMoney } from "../../lib/money";
 import { strings } from "../../strings";
-import type { Pairing } from "../../types";
 import { Chip } from "../atoms/Chip";
 import { Img } from "../atoms/Image";
 import { AddToOrderBar } from "../molecules/AddToOrderBar";
@@ -21,27 +20,21 @@ interface Props {
 }
 
 export function OfferSheet({ isOpen, offerId, editKey }: Props) {
-  const { db } = useMenuState();
-  const pairing = db.pairingsById.get(offerId);
-
-  if (!pairing) return null;
-
-  return <OfferSheetContent isOpen={isOpen} pairing={pairing} editKey={editKey} />;
-}
-
-function OfferSheetContent({ isOpen, pairing, editKey }: { isOpen: boolean; pairing: Pairing; editKey?: string }) {
   const locale = useLocale();
   const pick = (text: { en: string; ar: string }) => text[locale];
   const t = useStrings(strings);
   const money = useMoney();
   const { db, lines, add, updateLine, announce, swapToOrder, close } = useMenuState();
+  const pairing = db.pairingsById.get(offerId);
   const editing = editKey ? lines.find((l) => l.key === editKey) : undefined;
-  const [a, b] = pairing.items;
-  const addOnsA = db.addOnsByProduct.get(a.id) ?? [];
-  const addOnsB = db.addOnsByProduct.get(b.id) ?? [];
-  const optsA = useItemOptions(a, addOnsA, editing && { sizeId: editing.parts[0].sizeId, addOnIds: editing.parts[0].addOnIds });
-  const optsB = useItemOptions(b, addOnsB, editing && { sizeId: editing.parts[1].sizeId, addOnIds: editing.parts[1].addOnIds });
+  const [a, b] = pairing?.items ?? [];
+  const addOnsA = a ? (db.addOnsByProduct.get(a.id) ?? []) : [];
+  const addOnsB = b ? (db.addOnsByProduct.get(b.id) ?? []) : [];
+  const optsA = useItemOptions(a ?? ({} as typeof a extends infer T ? T & object : never), addOnsA, editing && { sizeId: editing.parts[0].sizeId, addOnIds: editing.parts[0].addOnIds });
+  const optsB = useItemOptions(b ?? ({} as typeof b extends infer T ? T & object : never), addOnsB, editing && { sizeId: editing.parts[1].sizeId, addOnIds: editing.parts[1].addOnIds });
   const [qty, setQty] = useState(editing?.qty ?? 1);
+
+  if (!pairing || !a || !b) return null;
 
   const parts = [partFromOptions(a, optsA), partFromOptions(b, optsB)] as [ReturnType<typeof partFromOptions>, ReturnType<typeof partFromOptions>];
   const unit = bundleUnitPrice(pairing, parts, db.addOnsById);
@@ -66,7 +59,6 @@ function OfferSheetContent({ isOpen, pairing, editKey }: { isOpen: boolean; pair
       isOpen={isOpen}
       label={title}
       onClose={editing ? () => swapToOrder(editing.key) : close}
-      closeAt="media"
       footer={<AddToOrderBar title={title} qty={qty} max={editing ? LIMITS.lineQty : LIMITS.sheetQty} onQty={setQty} label={label} total={unit * qty} onSubmit={submit} />}
     >
       <div className="flex flex-col gap-6">

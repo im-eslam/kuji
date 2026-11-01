@@ -28,16 +28,12 @@ export function MenuOverlays({ activeId, onGoToSection }: Props) {
   return (
     <>
       <OrderBar />
-      <ItemSheet
-        isOpen={overlay.type === "item"}
-        itemId={overlay.type === "item" ? overlay.itemId : ""}
-        editKey={overlay.type === "item" ? overlay.editKey : undefined}
-      />
-      <OfferSheet
-        isOpen={overlay.type === "offer"}
-        offerId={overlay.type === "offer" ? overlay.offerId : ""}
-        editKey={overlay.type === "offer" ? overlay.editKey : undefined}
-      />
+      {overlay.type === "item" && (
+        <ItemSheet isOpen itemId={overlay.itemId} editKey={overlay.editKey} />
+      )}
+      {overlay.type === "offer" && (
+        <OfferSheet isOpen offerId={overlay.offerId} editKey={overlay.editKey} />
+      )}
       <OrderSheet isOpen={overlay.type === "order"} />
       <CategorySheet isOpen={overlay.type === "categories"} onClose={close} categories={categories} activeId={activeId} onPick={onGoToSection} />
       <SearchOverlay isOpen={overlay.type === "search"} onGoToSection={onGoToSection} />
