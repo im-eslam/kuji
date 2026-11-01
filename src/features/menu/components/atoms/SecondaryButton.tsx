@@ -1,16 +1,19 @@
-import type { ReactNode } from 'react'
-import { cx } from '../../lib/cx'
+import type { ReactNode } from "react";
+import { Button } from "react-aria-components";
 
-interface Props { children: ReactNode; onClick: () => void; className?: string }
+interface Props {
+  children: ReactNode;
+  onPress: () => void;
+  className?: string;
+}
 
-export function SecondaryButton({ children, onClick, className }: Props) {
+export function SecondaryButton({ children, onPress, className = "" }: Props) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx('flex h-12 items-center justify-center gap-2 rounded-full border border-arctic px-4 text-center text-small font-semibold active:bg-mist', className)}
+    <Button
+      onPress={onPress}
+      className={`flex h-12 items-center justify-center gap-2 rounded-full border border-arctic px-4 text-center text-small font-semibold data-pressed:bg-mist ${className}`}
     >
       {children}
-    </button>
-  )
+    </Button>
+  );
 }

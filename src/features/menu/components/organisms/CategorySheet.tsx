@@ -1,30 +1,39 @@
-import { useCatalog } from '../../lib/catalog'
-import { useLang } from '../../state/LangContext'
-import { useUI } from '../../state/UIContext'
-import { CategoryRow } from '../molecules/CategoryRow'
-import { SheetTitle } from '../molecules/SheetTitle'
-import { BottomSheet } from './BottomSheet'
+import { useStrings } from "@/shared/i18n";
+import { strings } from "../../strings";
+import type { Category } from "../../types";
+import { CategoryRow } from "../molecules/CategoryRow";
+import { SheetTitle } from "../molecules/SheetTitle";
+import { BottomSheet } from "./BottomSheet";
 
-export function CategorySheet({ activeId, onPick }: { activeId: string; onPick: (id: string) => void }) {
-  const { t, pick } = useLang()
-  const { close } = useUI()
-  const { sections } = useCatalog()
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  categories: Array<{ category: Category; label: string; count: number }>;
+  activeId: string;
+  onPick: (id: string) => void;
+}
+
+export function CategorySheet({ isOpen, onClose, categories, activeId, onPick }: Props) {
+  const t = useStrings(strings);
   return (
-    <BottomSheet label={t('categoriesTitle')} onClose={close}>
+    <BottomSheet isOpen={isOpen} label={t.categoriesTitle} onClose={onClose}>
       <div className="flex min-h-12 items-center ps-4 pe-14">
-        <SheetTitle>{t('categoriesTitle')}</SheetTitle>
+        <SheetTitle>{t.categoriesTitle}</SheetTitle>
       </div>
       <div className="flex flex-col gap-1 px-4 pt-4">
-        {sections.map((s) => (
+        {categories.map(({ category, label, count }) => (
           <CategoryRow
-            key={s.id}
-            name={pick(s.pill)}
-            count={s.itemIds.length}
-            active={s.id === activeId}
-            onClick={() => { close(); window.setTimeout(() => onPick(s.id), 0) }}
+            key={category.id}
+            name={label}
+            count={count}
+            active={category.id === activeId}
+            onPress={() => {
+              onClose();
+              window.setTimeout(() => onPick(category.id), 0);
+            }}
           />
         ))}
       </div>
     </BottomSheet>
-  )
+  );
 }

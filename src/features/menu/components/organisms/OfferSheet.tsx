@@ -1,82 +1,83 @@
-import { useState } from 'react'
-import { getItem, getOffer } from '../../lib/catalog'
-import { useOptions } from '../../hooks/useOptions'
-import { LINE_QTY_MAX, SHEET_QTY_MAX, defaultPart, makeLine, offerIsDiscounted, offerSavings, offerUnit } from '../../lib/pricing'
-import { useLang } from '../../state/LangContext'
-import { useOrder } from '../../state/OrderContext'
-import { useUI } from '../../state/UIContext'
-import { Chip } from '../atoms/Chip'
-import { Img } from '../atoms/Image'
-import { AddToOrderBar } from '../molecules/AddToOrderBar'
-import { OptionBlock } from '../molecules/OptionBlock'
-import { SheetTitle } from '../molecules/SheetTitle'
-import { BottomSheet } from './BottomSheet'
+import { useState } from "react";
+import { useLocale, useStrings } from "@/shared/i18n";
+import { LIMITS } from "../../config";
+import { partFromOptions, useItemOptions } from "../../hooks/useItemOptions";
+import { useMenuState } from "../../hooks/useMenuState";
+import { bundleUnitPrice, makeLine } from "../../lib/pricing";
+import { useMoney } from "../../lib/money";
+import { strings } from "../../strings";
+import { Chip } from "../atoms/Chip";
+import { Img } from "../atoms/Image";
+import { AddToOrderBar } from "../molecules/AddToOrderBar";
+import { OptionBlock } from "../molecules/OptionBlock";
+import { SheetTitle } from "../molecules/SheetTitle";
+import { BottomSheet } from "./BottomSheet";
 
-interface Props { offerId: string; editKey?: string; instant?: boolean }
+interface Props {
+  isOpen: boolean;
+  offerId: string;
+  editKey?: string;
+}
 
-export function OfferSheet({ offerId, editKey, instant }: Props) {
-  const { pick, t, money } = useLang()
-  const order = useOrder()
-  const ui = useUI()
-  const offer = getOffer(offerId)!
-  const [a, b] = offer.items.map((id) => getItem(id)!)
-  const editing = editKey ? order.lines.find((l) => l.key === editKey) : undefined
-  const optsA = useOptions(a.profile, editing && { sizeId: editing.parts[0].sizeId, addOnIds: editing.parts[0].addOnIds })
-  const optsB = useOptions(b.profile, editing && { sizeId: editing.parts[1].sizeId, addOnIds: editing.parts[1].addOnIds })
-  const [qty, setQty] = useState(editing?.qty ?? 1)
+export function OfferSheet({ isOpen, offerId, editKey }: Props) {
+  const locale = useLocale();
+  const pick = (text: { en: string; ar: string }) => text[locale];
+  const t = useStrings(strings);
+  const money = useMoney();
+  const { db, lines, add, updateLine, announce, swapToOrder, close } = useMenuState();
+  const pairing = db.pairingsById.get(offerId);
+  const editing = editKey ? lines.find((l) => l.key === editKey) : undefined;
+  const [a, b] = pairing?.items ?? [];
+  const addOnsA = a ? (db.addOnsByProduct.get(a.id) ?? []) : [];
+  const addOnsB = b ? (db.addOnsByProduct.get(b.id) ?? []) : [];
+  const optsA = useItemOptions(a ?? ({} as typeof a extends infer T ? T & object : never), addOnsA, editing && { sizeId: editing.parts[0].sizeId, addOnIds: editing.parts[0].addOnIds });
+  const optsB = useItemOptions(b ?? ({} as typeof b extends infer T ? T & object : never), addOnsB, editing && { sizeId: editing.parts[1].sizeId, addOnIds: editing.parts[1].addOnIds });
+  const [qty, setQty] = useState(editing?.qty ?? 1);
 
-  const parts = [a, b].map((item, i) => {
-    const o = i === 0 ? optsA : optsB
-    return { ...defaultPart(item), sizeId: o.showSize ? o.sizeId : undefined, addOnIds: o.addOnIds }
-  })
-  const unit = offerUnit(offer, parts)
-  const discounted = offerIsDiscounted(offer)
-  const title = `${pick(a.name)} + ${pick(b.name)}`
-  const label = editing ? t('updateOrder') : t('addToOrder')
+  if (!pairing || !a || !b) return null;
+
+  const parts = [partFromOptions(a, optsA), partFromOptions(b, optsB)] as [ReturnType<typeof partFromOptions>, ReturnType<typeof partFromOptions>];
+  const unit = bundleUnitPrice(pairing, parts, db.addOnsById);
+  const title = `${pick(a.name)} + ${pick(b.name)}`;
+  const label = editing ? t.updateOrder : t.addToOrder;
 
   const submit = () => {
-    const line = makeLine('bundle', offer.id, parts, qty)
+    const line = makeLine("bundle", pairing.id, parts, qty);
     if (editing) {
-      order.updateLine(editing.key, line)
-      ui.announce(t('a11yOrderUpdated'))
-      ui.swapToOrder(line.key)
+      updateLine(editing.key, { ...line, qty });
+      announce(t.a11yOrderUpdated);
+      swapToOrder(line.key);
     } else {
-      order.add(line)
-      ui.announce(t('a11yAdded', { title }))
-      ui.close()
+      add(line);
+      announce(t.a11yAdded(title));
+      close();
     }
-  }
+  };
 
   return (
     <BottomSheet
+      isOpen={isOpen}
       label={title}
-      onClose={editing ? () => ui.swapToOrder(editing.key) : ui.close}
-      instant={instant}
+      onClose={editing ? () => swapToOrder(editing.key) : close}
       closeAt="media"
-      footer={
-        <AddToOrderBar
-          title={title}
-          qty={qty}
-          max={editing ? LINE_QTY_MAX : SHEET_QTY_MAX}
-          onQty={setQty}
-          label={label}
-          total={unit * qty}
-          onSubmit={submit}
-        />
-      }
+      footer={<AddToOrderBar title={title} qty={qty} max={editing ? LIMITS.lineQty : LIMITS.sheetQty} onQty={setQty} label={label} total={unit * qty} onSubmit={submit} />}
     >
       <div className="flex flex-col gap-6">
         <div className="flex gap-2 px-4">
-          <Img category={a.categoryId} alt={pick(a.name)} className="aspect-square flex-1 rounded-lg" />
-          <Img category={b.categoryId} alt={pick(b.name)} className="aspect-square flex-1 rounded-lg" />
+          <Img productImage={a.image} categoryId={a.categoryId} alt={pick(a.name)} className="aspect-square flex-1 rounded-lg" />
+          <Img productImage={b.image} categoryId={b.categoryId} alt={pick(b.name)} className="aspect-square flex-1 rounded-lg" />
         </div>
         <div className="flex flex-col gap-2 px-4">
-          {discounted && <div><Chip kind="savings">{t('offerSaveChip', { price: money(offerSavings(offer)) })}</Chip></div>}
+          {pairing.savings > 0 && (
+            <div>
+              <Chip kind="savings">{t.saveChip(money(pairing.savings))}</Chip>
+            </div>
+          )}
           <SheetTitle>{title}</SheetTitle>
         </div>
-        <OptionBlock item={a} opts={optsA} withProductRow />
-        <OptionBlock item={b} opts={optsB} withProductRow />
+        <OptionBlock item={a} name={pick(a.name)} opts={optsA} pick={pick} withProductRow />
+        <OptionBlock item={b} name={pick(b.name)} opts={optsB} pick={pick} withProductRow />
       </div>
     </BottomSheet>
-  )
+  );
 }

@@ -1,26 +1,37 @@
-import { cx } from '../../lib/cx'
-import { Icon } from './Icon'
-import { Price } from './Price'
+import { Checkbox } from "react-aria-components";
+import { Icon } from "@/shared/icons";
+import { Price } from "./Price";
+import { Swap } from "./Swap";
 
-interface Props { label: string; price: number; checked: boolean; onToggle: () => void }
+interface Props {
+  value: string;
+  label: string;
+  price: number;
+}
 
-export function CheckboxRow({ label, price, checked, onToggle }: Props) {
+// Used inside a react-aria CheckboxGroup, which owns the selection state.
+export function CheckboxRow({ value, label, price }: Props) {
   return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      onClick={onToggle}
-      className="flex h-14 w-full items-center gap-4 border-b border-mist px-4 text-start transition-colors duration-150 active:bg-mist"
+    <Checkbox
+      value={value}
+      className="flex h-14 w-full items-center gap-4 border-b border-mist px-4 text-start transition-colors duration-150 data-pressed:bg-mist"
     >
-      <span
-        aria-hidden="true"
-        className={cx('flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border-2 border-navy transition-colors duration-150', checked && 'bg-yellow')}
-      >
-        <Icon name="check" size={16} className={cx('transition-[opacity,transform] duration-150 ease-out', checked ? 'scale-100 opacity-100' : 'scale-50 opacity-0')} />
-      </span>
-      <span className={cx('flex-1 text-body', checked ? 'font-semibold' : 'font-medium')}>{label}</span>
-      <span className="min-w-20 text-end"><Price value={price} plus size="small" /></span>
-    </button>
-  )
+      {({ isSelected }) => (
+        <>
+          <span
+            aria-hidden="true"
+            className={`flex size-6 shrink-0 items-center justify-center rounded-sm border-2 border-navy transition-colors duration-150 ${isSelected ? "bg-yellow" : ""}`}
+          >
+            <Swap value={isSelected} className={`transition-[opacity,transform] duration-150 ease-out ${isSelected ? "scale-100 opacity-100" : "scale-50 opacity-0"}`}>
+              <Icon name="check" className="size-4" />
+            </Swap>
+          </span>
+          <span className={`flex-1 text-body ${isSelected ? "font-semibold" : "font-medium"}`}>{label}</span>
+          <span className="min-w-20 text-end">
+            <Price value={price} plus size="small" />
+          </span>
+        </>
+      )}
+    </Checkbox>
+  );
 }

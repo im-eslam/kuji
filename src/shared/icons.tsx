@@ -22,6 +22,10 @@ const PATHS = {
   refresh:
     "M4 12a8 8 0 0 1 13.66-5.66M20 12a8 8 0 0 1-13.66 5.66M17 4v4.5h-4.5M7 20v-4.5h4.5",
   copy: "M9 9.5h9A1.5 1.5 0 0 1 19.5 11v8A1.5 1.5 0 0 1 18 20.5H9A1.5 1.5 0 0 1 7.5 19v-8A1.5 1.5 0 0 1 9 9.5zM6 14.5h-.5A1.5 1.5 0 0 1 4 13V5a1.5 1.5 0 0 1 1.5-1.5H14A1.5 1.5 0 0 1 15.5 5v.5",
+  plus: "M12 5v14M5 12h14",
+  minus: "M5 12h14",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  sparkle: "M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

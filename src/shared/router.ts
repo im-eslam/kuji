@@ -1,5 +1,10 @@
 import { useSyncExternalStore, type MouseEvent } from "react";
-import { ROUTES } from "./routes";
+
+const ROUTES = {
+  landing: "/",
+  menu: "/menu",
+  review: "/review",
+} as const;
 
 const listeners = new Set<() => void>();
 

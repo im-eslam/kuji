@@ -1,26 +1,27 @@
-import { useLang } from '../../state/LangContext'
-import { cx } from '../../lib/cx'
-import { Icon } from './Icon'
+import { Button } from "react-aria-components";
+import { Icon } from "@/shared/icons";
+import { useStrings } from "@/shared/i18n";
+import { strings } from "../../strings";
 
 interface Props {
-  onClick: () => void
+  onPress: () => void;
   /** 32px to the eye, outlined so it reads on a photo and on white. The tap target stays 48px either way. */
-  small?: boolean
-  className?: string
+  small?: boolean;
+  className?: string;
 }
 
-export function CloseButton({ onClick, small, className }: Props) {
-  const { t } = useLang()
+const styles = {
+  button: "group flex size-12 items-center justify-center",
+  visual: "flex items-center justify-center rounded-full bg-white transition group-data-pressed:scale-90",
+};
+
+export function CloseButton({ onPress, small, className = "" }: Props) {
+  const t = useStrings(strings);
   return (
-    <button type="button" aria-label={t('a11yClose')} onClick={onClick} className={cx('group flex h-12 w-12 items-center justify-center', className)}>
-      <span
-        className={cx(
-          'flex items-center justify-center rounded-full bg-white transition-transform duration-150 ease-out group-active:scale-90',
-          small ? 'h-8 w-8 ring-1 ring-arctic' : 'h-10 w-10',
-        )}
-      >
-        <Icon name="x" size={small ? 16 : 20} />
+    <Button aria-label={t.a11yClose} onPress={onPress} className={`${styles.button} ${className}`}>
+      <span className={`${styles.visual} ${small ? "size-8 ring-1 ring-arctic" : "size-10"}`}>
+        <Icon name="close" className={small ? "size-4" : "size-5"} />
       </span>
-    </button>
-  )
+    </Button>
+  );
 }
