@@ -8,7 +8,6 @@ import { strings } from "../../strings";
 import type { Product } from "../../types";
 import { Badge } from "../atoms/Badge";
 import { Img } from "../atoms/Image";
-import { Price } from "../atoms/Price";
 import { AddToOrderBar } from "../molecules/AddToOrderBar";
 import { OftenOrderedCard } from "../molecules/OftenOrderedCard";
 import { OptionBlock } from "../molecules/OptionBlock";
@@ -26,20 +25,26 @@ function pickFor(locale: "en" | "ar") {
 }
 
 export function ItemSheet({ isOpen, itemId, editKey }: Props) {
+  const { db } = useMenuState();
+  const item = db.productsById.get(itemId);
+
+  if (!item) return null;
+
+  return <ItemSheetContent isOpen={isOpen} item={item} editKey={editKey} />;
+}
+
+function ItemSheetContent({ isOpen, item, editKey }: { isOpen: boolean; item: Product; editKey?: string }) {
   const locale = useLocale();
   const pick = pickFor(locale);
   const t = useStrings(strings);
   const { db, lines, add, updateLine, announce, swapToOrder, close } = useMenuState();
-  const item = db.productsById.get(itemId) as Product | undefined;
   const editing = editKey ? lines.find((l) => l.key === editKey) : undefined;
   const initial = editing?.parts[0];
-  const addOnsForProduct = item ? (db.addOnsByProduct.get(item.id) ?? []) : [];
-  const opts = useItemOptions(item ?? ({} as Product), addOnsForProduct, initial && { sizeId: initial.sizeId, addOnIds: initial.addOnIds });
+  const addOnsForProduct = db.addOnsByProduct.get(item.id) ?? [];
+  const opts = useItemOptions(item, addOnsForProduct, initial && { sizeId: initial.sizeId, addOnIds: initial.addOnIds });
   const [qty, setQty] = useState(editing?.qty ?? 1);
   const [added, setAdded] = useState<Record<string, number>>({});
   const [flash, setFlash] = useState<string | null>(null);
-
-  if (!item) return null;
 
   const part = partFromOptions(item, opts);
   const unit = partUnitPrice(item, part, db.addOnsById);
