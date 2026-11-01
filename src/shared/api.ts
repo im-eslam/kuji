@@ -40,6 +40,62 @@ function readErrorCode(value: unknown): string | undefined {
   return undefined;
 }
 
+export async function getJson<T>(
+  path: string,
+  externalSignal?: AbortSignal,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort();
+  externalSignal?.addEventListener("abort", abortFromCaller, { once: true });
+  if (externalSignal?.aborted) controller.abort();
+
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+
+    const responseText = await response.text();
+    let data: unknown = null;
+    if (responseText.trim() !== "") {
+      try {
+        data = JSON.parse(responseText) as unknown;
+      } catch {
+        // A proxy may return HTML/plain text. Preserve the HTTP status and use a safe message.
+      }
+    }
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        readErrorMessage(data) ?? "Request failed",
+        readErrorCode(data),
+      );
+    }
+
+    if (data === null) {
+      throw new ApiError(
+        response.status,
+        "Invalid server response",
+        "INVALID_RESPONSE",
+      );
+    }
+
+    return data as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (externalSignal?.aborted) throw error;
+    if (controller.signal.aborted)
+      throw new ApiError(0, "Request timed out", "TIMEOUT");
+    throw new ApiError(0, "Unable to reach the server", "NETWORK_ERROR");
+  } finally {
+    clearTimeout(timeoutId);
+    externalSignal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
 export async function postJson<T extends ApiSuccess = ApiSuccess>(
   path: string,
   body: unknown,

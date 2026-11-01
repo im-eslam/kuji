@@ -1,6 +1,7 @@
 import { I18nProvider, Link, RouterProvider } from "react-aria-components";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { ReviewPage } from "@/features/review/ReviewPage";
+import { MenuPage } from "@/features/menu/MenuPage";
 import { useLocale, type Locale } from "@/shared/i18n";
 import { navigate, usePath } from "@/shared/router";
 import { ROUTES } from "@/shared/routes";
@@ -31,7 +32,9 @@ export default function App() {
   return (
     <I18nProvider locale={locale}>
       <RouterProvider navigate={navigate}>
-        {isLandingExperience ? (
+        {path === ROUTES.menu ? (
+          <MenuPage />
+        ) : isLandingExperience ? (
           <>
             <LandingPage />
             <ReviewPage />
