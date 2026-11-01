@@ -2,19 +2,15 @@ import { ToggleButton } from "react-aria-components";
 import { useStrings } from "@/shared/i18n";
 import { Icon } from "@/shared/icons";
 import { strings } from "../../strings";
-import { useMoney } from "../../lib/money";
 import { Swap } from "../atoms/Swap";
 
 interface Props {
   isOn: boolean;
   onChange: (on: boolean) => void;
-  names: string;
-  price: number;
 }
 
-export function BaristaWayToggle({ isOn, onChange, names, price }: Props) {
+export function BaristaWayToggle({ isOn, onChange }: Props) {
   const t = useStrings(strings);
-  const money = useMoney();
   return (
     <ToggleButton
       isSelected={isOn}
@@ -26,7 +22,7 @@ export function BaristaWayToggle({ isOn, onChange, names, price }: Props) {
       <Icon name="sparkle" className="size-6" />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-small font-bold">{t.baristaWay}</span>
-        <span className="text-caption font-medium">{t.baristaSub(names, money(price, { plus: true }))}</span>
+        <span className="text-caption font-medium">{t.baristaSub}</span>
       </span>
       <span
         aria-hidden="true"

@@ -22,8 +22,7 @@ function pickBadge(ids: string[]): BadgeKind | null {
 }
 
 function parseProduct(wire: WireProduct, categoriesById: Map<string, Category>, sizesById: Map<string, SizeOption>): Product | null {
-  if (!wire.inStock) return null;
-  if (typeof wire.id !== "string" || !categoriesById.has(wire.categoryId)) return null;
+  if (typeof wire.id !== "string" || !categoriesById.has(wire.categoryId) || typeof wire.inStock !== "boolean") return null;
   if (typeof wire.price !== "number" || wire.price < 0) return null;
 
   const sizes = (wire.sizes ?? [])
@@ -43,6 +42,7 @@ function parseProduct(wire: WireProduct, categoriesById: Map<string, Category>, 
     desc: wire.desc,
     price: wire.price,
     image: wire.image,
+    inStock: wire.inStock,
     sizes,
     badge: pickBadge(wire.badges ?? []),
     discount,
@@ -87,7 +87,7 @@ export function parseMenu(doc: MenuDocument): MenuDb {
     if (product) productsById.set(product.id, product);
   }
 
-  // Drop dangling references now that every in-stock product is known, and limit the Barista's Way to
+  // Drop dangling references now that every product is known, and limit the Barista's Way to
   // add-ons that are actually valid (in scope) for that product.
   for (const product of productsById.values()) {
     product.oftenOrderedWith = product.oftenOrderedWith.filter((id) => id !== product.id && productsById.has(id));
@@ -118,7 +118,7 @@ export function parseMenu(doc: MenuDocument): MenuDb {
     if (typeof wire.bundlePrice !== "number" || wire.bundlePrice < 0) continue;
     const a = productsById.get(wire.items?.[0]);
     const b = productsById.get(wire.items?.[1]);
-    if (!a || !b) continue;
+    if (!a?.inStock || !b?.inStock) continue;
     const regularPrice = basePriceFor(a, defaultSizeId(a)) + basePriceFor(b, defaultSizeId(b));
     pairings.push({
       id: wire.id,

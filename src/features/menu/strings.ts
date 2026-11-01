@@ -3,9 +3,10 @@ import type { Localized } from "@/shared/i18n";
 const en = {
   badgeTop: "Top rated",
   badgeNew: "New",
+  outOfStock: "Out of stock",
   addOns: "Add-ons",
   baristaWay: "Barista's Way",
-  baristaSub: (names: string, price: string) => `${names} · ${price}`,
+  baristaSub: "Add our signature extras in one tap",
   size: "Size",
   oftenOrdered: "Often ordered with",
   updateOrder: "Update order",
@@ -62,9 +63,10 @@ const en = {
 const ar: typeof en = {
   badgeTop: "الأعلى تقييماً",
   badgeNew: "جديد",
+  outOfStock: "غير متوفر",
   addOns: "إضافات",
   baristaWay: "طريقة الباريستا",
-  baristaSub: (names, price) => `${names} · ${price}`,
+  baristaSub: "أضف إضافاتنا المميزة بضغطة واحدة",
   size: "الحجم",
   oftenOrdered: "غالباً ما يُطلب مع",
   updateOrder: "تحديث الطلب",

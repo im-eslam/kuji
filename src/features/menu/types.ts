@@ -122,6 +122,7 @@ export interface Product {
   desc: LocalizedText;
   price: number;
   image: string | null;
+  inStock: boolean;
   sizes: ProductSize[];
   badge: BadgeKind | null;
   discount: WireDiscount | null;

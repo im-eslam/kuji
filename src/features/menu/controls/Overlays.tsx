@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useLocale } from "@/shared/i18n";
 import { CategorySheet, ItemSheet, OfferSheet, OrderBar, OrderSheet, SearchOverlay } from "../components";
 import { useMenuState } from "../hooks/useMenuState";
@@ -13,6 +13,9 @@ export function MenuOverlays({ activeId, onGoToSection }: Props) {
   const { db, overlay, close } = useMenuState();
   const locale = useLocale();
   const pick = (text: { en: string; ar: string }) => text[locale];
+  const lastItem = useRef<{ itemId: string; editKey?: string } | null>(null);
+
+  if (overlay.type === "item") lastItem.current = { itemId: overlay.itemId, editKey: overlay.editKey };
 
   const categories = useMemo(
     () =>
@@ -28,8 +31,12 @@ export function MenuOverlays({ activeId, onGoToSection }: Props) {
   return (
     <>
       <OrderBar />
-      {overlay.type === "item" && (
-        <ItemSheet isOpen itemId={overlay.itemId} editKey={overlay.editKey} />
+      {lastItem.current && (
+        <ItemSheet
+          isOpen={overlay.type === "item"}
+          itemId={lastItem.current.itemId}
+          editKey={overlay.type === "item" ? overlay.editKey : lastItem.current.editKey}
+        />
       )}
       {overlay.type === "offer" && (
         <OfferSheet isOpen offerId={overlay.offerId} editKey={overlay.editKey} />

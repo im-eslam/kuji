@@ -89,7 +89,7 @@ export function MenuStateProvider({ db, children }: { db: MenuDb; children: Reac
 
   // The order lives in memory only. If the catalog reloads and a product is gone, drop lines that reference it.
   useEffect(() => {
-    dispatch({ type: "prune", validProductIds: new Set(db.productsById.keys()) });
+    dispatch({ type: "prune", validProductIds: new Set([...db.productsById.values()].filter((product) => product.inStock).map((product) => product.id)) });
   }, [db]);
 
   const subtotal = useMemo(

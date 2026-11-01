@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { defaultSizeId } from "../lib/pricing";
 import type { AddOn, OrderLinePart, Product } from "../types";
 
@@ -19,6 +19,7 @@ export function useItemOptions(
   product: Product,
   addOnsForProduct: AddOn[],
   initial?: { sizeId?: string; addOnIds: string[] },
+  resetKey?: string,
 ): ItemOptionsState {
   const baristaAddOnIds = product.baristaWay?.addOnIds ?? [];
   const [sizeId, setSizeId] = useState(initial?.sizeId ?? defaultSizeId(product));
@@ -26,6 +27,13 @@ export function useItemOptions(
   const [baristaOn, setBaristaOn] = useState(
     () => baristaAddOnIds.length > 0 && baristaAddOnIds.every((id) => (initial?.addOnIds ?? []).includes(id)),
   );
+
+  useLayoutEffect(() => {
+    if (!resetKey) return;
+    setSizeId(initial?.sizeId ?? defaultSizeId(product));
+    setAddOnIds(initial?.addOnIds ?? []);
+    setBaristaOn(baristaAddOnIds.length > 0 && baristaAddOnIds.every((id) => (initial?.addOnIds ?? []).includes(id)));
+  }, [resetKey]);
 
   const toggleAddOn = (id: string) => {
     setAddOnIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));

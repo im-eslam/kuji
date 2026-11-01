@@ -5,7 +5,9 @@ import { strings } from "../../strings";
 
 interface SizeOption {
   id: string;
-  label: string;
+  name: string;
+  priceLabel: string;
+  regularLabel?: string;
 }
 
 interface Props {
@@ -35,9 +37,15 @@ export function SizePicker({ sizes, value, onChange }: Props) {
             <Radio
               key={s.id}
               value={s.id}
-              className="relative flex items-center justify-center whitespace-nowrap rounded-full px-2 text-center text-small font-medium text-navy/65 outline-none transition-colors duration-220 ease-[var(--ease-smooth)] data-selected:font-semibold data-selected:text-white"
+              className="group relative flex items-center justify-center whitespace-nowrap rounded-full px-2 text-center text-small font-medium text-navy/65 outline-none transition-colors duration-220 ease-[var(--ease-smooth)] data-selected:font-semibold data-selected:text-white"
             >
-              {s.label}
+              <span className="flex flex-col items-center leading-tight">
+                <span className="text-caption">{s.name}</span>
+                <span className="flex items-baseline gap-1 text-caption">
+                  {s.regularLabel && <span className="font-medium text-navy/55 line-through group-data-selected:text-white/70">{s.regularLabel}</span>}
+                  <span>{s.priceLabel}</span>
+                </span>
+              </span>
             </Radio>
           ))}
         </div>

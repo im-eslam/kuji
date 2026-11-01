@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useLocale, useStrings } from "@/shared/i18n";
 import { LIMITS, QUICK_ADD_FLASH_MS } from "../../config";
 import { partFromOptions, useItemOptions } from "../../hooks/useItemOptions";
@@ -33,10 +33,22 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
   const editing = editKey ? lines.find((l) => l.key === editKey) : undefined;
   const initial = editing?.parts[0];
   const addOnsForProduct = item ? (db.addOnsByProduct.get(item.id) ?? []) : [];
-  const opts = useItemOptions(item ?? ({} as Product), addOnsForProduct, initial && { sizeId: initial.sizeId, addOnIds: initial.addOnIds });
+  const opts = useItemOptions(
+    item ?? ({} as Product),
+    addOnsForProduct,
+    initial && { sizeId: initial.sizeId, addOnIds: initial.addOnIds },
+    isOpen ? `${itemId}:${editKey ?? "new"}` : undefined,
+  );
   const [qty, setQty] = useState(editing?.qty ?? 1);
   const [added, setAdded] = useState<Record<string, number>>({});
   const [flash, setFlash] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setQty(editing?.qty ?? 1);
+    setAdded({});
+    setFlash(null);
+  }, [isOpen, itemId, editKey]);
 
   if (!item) return null;
 
@@ -46,6 +58,7 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
   const name = pick(item.name);
 
   const submit = () => {
+    if (!item.inStock) return;
     const line = makeLine("item", item.id, [part], qty);
     if (editing) {
       updateLine(editing.key, { ...line, qty });
@@ -59,6 +72,7 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
   };
 
   const quickAdd = (other: Product) => {
+    if (!other.inStock) return;
     add(makeLine("item", other.id, [{ productId: other.id, sizeId: undefined, addOnIds: [] }], 1));
     setAdded((a) => ({ ...a, [other.id]: (a[other.id] ?? 0) + 1 }));
     setFlash(other.id);
@@ -77,7 +91,7 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
       isOpen={isOpen}
       label={name}
       onClose={editing ? () => swapToOrder(editing.key) : close}
-      footer={
+      footer={item.inStock ? (
         <AddToOrderBar
           title={name}
           qty={qty}
@@ -87,14 +101,26 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
           total={total}
           onSubmit={submit}
         />
-      }
+      ) : undefined}
     >
       <div className="flex flex-col gap-6">
         <div className="px-4">
-          <Img productImage={item.image} categoryId={item.categoryId} alt={name} className="aspect-4/3 w-full rounded-lg" />
+          <div className="relative">
+            <Img
+              productImage={item.image}
+              categoryId={item.categoryId}
+              alt={name}
+              className={`aspect-4/3 w-full rounded-lg ${item.inStock ? "" : "grayscale"}`}
+            />
+            {!item.inStock && (
+              <span className="absolute end-2 top-2">
+                <Badge kind="outOfStock" />
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex flex-col gap-2 px-4">
-          {item.badge && (
+          {item.inStock && item.badge && (
             <div>
               <Badge kind={item.badge} />
             </div>
@@ -102,7 +128,14 @@ export function ItemSheet({ isOpen, itemId, editKey }: Props) {
           <SheetTitle>{name}</SheetTitle>
           <p className="text-small font-medium text-navy/65">{pick(item.desc)}</p>
         </div>
-        <OptionBlock item={item} name={name} opts={opts} pick={pick} />
+        <OptionBlock
+          item={item}
+          name={name}
+          opts={opts}
+          pick={pick}
+          pickSize={(id) => pick(db.sizesById.get(id)?.name ?? { en: id, ar: id })}
+          discountedSizes
+        />
         {!editing && oftenOrdered.length > 0 && (
           <section aria-label={t.oftenOrdered} className="flex flex-col gap-2">
             <h3 className="px-4 text-body font-bold">{t.oftenOrdered}</h3>

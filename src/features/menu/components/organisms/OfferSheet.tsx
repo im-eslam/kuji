@@ -74,8 +74,8 @@ export function OfferSheet({ isOpen, offerId, editKey }: Props) {
           )}
           <SheetTitle>{title}</SheetTitle>
         </div>
-        <OptionBlock item={a} name={pick(a.name)} opts={optsA} pick={pick} withProductRow />
-        <OptionBlock item={b} name={pick(b.name)} opts={optsB} pick={pick} withProductRow />
+        <OptionBlock item={a} name={pick(a.name)} opts={optsA} pick={pick} pickSize={(id) => pick(db.sizesById.get(id)?.name ?? { en: id, ar: id })} withProductRow />
+        <OptionBlock item={b} name={pick(b.name)} opts={optsB} pick={pick} pickSize={(id) => pick(db.sizesById.get(id)?.name ?? { en: id, ar: id })} withProductRow />
       </div>
     </BottomSheet>
   );

@@ -18,8 +18,8 @@ const RAMP_PX = 32;
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 const styles = {
-  overlay: "fixed inset-0 z-40 flex items-end justify-center bg-scrim data-entering:animate-scrim-in data-exiting:animate-scrim-out",
-  panel: "flex max-h-[90dvh] w-full max-w-120 flex-col overflow-hidden rounded-t-sheet bg-white shadow-sheet data-entering:animate-slide-up data-exiting:animate-slide-down",
+  overlay: "fixed inset-0 z-50 flex items-end justify-center bg-scrim data-entering:animate-scrim-in data-exiting:animate-scrim-out",
+  panel: "flex max-h-[88dvh] w-full max-w-120 flex-col overflow-hidden rounded-t-sheet bg-white shadow-sheet data-entering:animate-slide-up data-exiting:animate-slide-down",
   settle: "transition-transform duration-500 ease-[var(--ease-smooth)]",
   dialog: "relative flex min-h-0 flex-1 flex-col outline-none",
   bar: "relative z-20 flex h-10 shrink-0 items-center rounded-t-sheet bg-white",

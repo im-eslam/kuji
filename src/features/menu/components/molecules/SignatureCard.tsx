@@ -5,7 +5,7 @@ import type { Product } from "../../types";
 import { Badge } from "../atoms/Badge";
 import { Chevron } from "../atoms/Chevron";
 import { Img } from "../atoms/Image";
-import { Price } from "../atoms/Price";
+import { PriceWithDiscount } from "../atoms/PriceWithDiscount";
 
 interface Props {
   item: Product;
@@ -26,10 +26,15 @@ export const SignatureCard = memo(function SignatureCard({ item, name, desc, onP
       className="group flex w-[72%] min-w-64 max-w-96 shrink-0 snap-start flex-col gap-3 rounded-lg border border-arctic bg-white p-3 text-start transition-[transform,background-color] duration-150 ease-out data-pressed:scale-[0.98] data-pressed:bg-mist xs:p-4"
     >
       <span className="relative block">
-        <Img productImage={item.image} categoryId={item.categoryId} priority={priority} className="aspect-square w-full rounded-md" />
-        {item.badge && (
+        <Img
+          productImage={item.image}
+          categoryId={item.categoryId}
+          priority={priority}
+          className={`aspect-square w-full rounded-md ${item.inStock ? "" : "grayscale"}`}
+        />
+        {(item.badge || !item.inStock) && (
           <span className="absolute end-2 top-2">
-            <Badge kind={item.badge} />
+            <Badge kind={item.inStock ? item.badge! : "outOfStock"} />
           </span>
         )}
       </span>
@@ -37,8 +42,8 @@ export const SignatureCard = memo(function SignatureCard({ item, name, desc, onP
         <span className="line-clamp-2 text-balance text-heading font-bold">{name}</span>
         <span className="line-clamp-2 text-pretty text-caption font-medium text-navy/65">{desc}</span>
       </span>
-      <span className="mt-auto flex items-center justify-between">
-        <Price value={price} size="body" />
+      <span className={`mt-auto flex items-center justify-between ${item.inStock ? "" : "opacity-60"}`}>
+        <PriceWithDiscount value={price} regular={price < basePriceFor(item, defaultSizeId(item)) ? basePriceFor(item, defaultSizeId(item)) : null} size="body" />
         <Chevron />
       </span>
     </Button>

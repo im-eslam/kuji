@@ -1,6 +1,7 @@
 import type { ItemOptionsState } from "../../hooks/useItemOptions";
 import { useMoney } from "../../lib/money";
 import type { Product } from "../../types";
+import { discountedBasePrice } from "../../lib/pricing";
 import { Img } from "../atoms/Image";
 import { AddOnList } from "./AddOnList";
 import { BaristaWayToggle } from "./BaristaWayToggle";
@@ -11,20 +12,15 @@ interface Props {
   name: string;
   opts: ItemOptionsState;
   pick: (name: Product["name"]) => string;
+  pickSize: (id: string) => string;
   withProductRow?: boolean;
+  discountedSizes?: boolean;
 }
 
 // Only the blocks this product's profile allows, in the order people decide: size, then Barista's Way, then add-ons.
-export function OptionBlock({ item, name, opts, pick, withProductRow }: Props) {
+export function OptionBlock({ item, name, opts, pick, pickSize, withProductRow, discountedSizes }: Props) {
   const money = useMoney();
   if (!opts.showBarista && !opts.showSize && !opts.showAddOns) return null;
-  const baristaNames = item.baristaWay?.addOnIds
-    .map((id) => opts.addOns.find((a) => a.id === id))
-    .filter((a): a is NonNullable<typeof a> => !!a)
-    .map((a) => pick(a.name))
-    .join(" + ");
-  const baristaPrice = item.baristaWay?.addOnIds.reduce((sum, id) => sum + (opts.addOns.find((a) => a.id === id)?.price ?? 0), 0) ?? 0;
-
   return (
     <section aria-label={name} className="flex flex-col gap-4">
       {withProductRow && (
@@ -35,14 +31,17 @@ export function OptionBlock({ item, name, opts, pick, withProductRow }: Props) {
       )}
       {opts.showSize && (
         <SizePicker
-          sizes={item.sizes.map((s) => ({ id: s.id, label: money(s.price) }))}
+          sizes={item.sizes.map((s) => {
+            const price = discountedSizes ? discountedBasePrice(item, s.price) : s.price;
+            return { id: s.id, name: pickSize(s.id), priceLabel: money(price), regularLabel: price < s.price ? money(s.price) : undefined };
+          })}
           value={opts.sizeId}
           onChange={opts.setSizeId}
         />
       )}
       {opts.showBarista && (
         <div className="px-4">
-          <BaristaWayToggle isOn={opts.baristaOn} onChange={opts.toggleBarista} names={baristaNames ?? ""} price={baristaPrice} />
+          <BaristaWayToggle isOn={opts.baristaOn} onChange={opts.toggleBarista} />
         </div>
       )}
       {opts.showAddOns && <AddOnList addOns={opts.addOns} selected={opts.addOnIds} onChange={(ids) => setAddOns(opts, ids)} pick={pick} />}
