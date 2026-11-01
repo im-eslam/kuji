@@ -4,7 +4,6 @@ import { Menu } from "./Menu";
 import { strings } from "./localization/strings";
 import { useMenu } from "./hooks/useMenu";
 
-/** The /menu page: loads the menu, then shows a loading screen, an error screen, or the menu itself. */
 export function MenuPage() {
   const t = useStrings(strings);
   const menu = useMenu();
