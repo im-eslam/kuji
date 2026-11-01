@@ -39,15 +39,21 @@
   --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.3, 0, 0, 1);
 
+  /* Dedicated bottom sheet easing */
+  --ease-sheet-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sheet-exit: cubic-bezier(0.4, 0, 1, 1);
+
   /* Fade */
   --animate-fade-in: fade-in 150ms ease-out backwards;
   --animate-fade-out: fade-out 150ms ease-in forwards;
-  --animate-scrim-in: fade-in 400ms var(--ease-smooth) backwards;
-  --animate-scrim-out: scrim-out 250ms var(--ease-exit) forwards;
 
-  /* Slide */
-  --animate-slide-up: slide-up 500ms var(--ease-smooth) backwards;
-  --animate-slide-down: slide-down 300ms var(--ease-exit) forwards;
+  /* Background */
+  --animate-scrim-in: fade-in 300ms var(--ease-sheet-enter) backwards;
+  --animate-scrim-out: scrim-out 250ms var(--ease-sheet-exit) forwards;
+
+  /* Bottom Sheet */
+  --animate-slide-up: slide-up 400ms var(--ease-sheet-enter) backwards;
+  --animate-slide-down: slide-down 300ms var(--ease-sheet-exit) forwards;
 
   /* Reveal */
   --animate-reveal-in: reveal-in 240ms var(--ease-smooth) backwards;
