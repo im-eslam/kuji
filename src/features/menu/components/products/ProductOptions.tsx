@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import {
   Checkbox,
   CheckboxGroup,
@@ -27,7 +27,7 @@ const styles = {
   productImage: "size-12 shrink-0 rounded-md",
   productName: "min-w-0 flex-1 text-body font-semibold text-balance",
 
-  group: "flex flex-col gap-2 px-4",
+  group: "relative flex flex-col gap-2 px-4",
   groupLabel: "text-body font-bold",
 
   segments:
@@ -59,7 +59,7 @@ const styles = {
 
   addOnsLabel: "px-4 pb-2 text-body font-bold",
   addOn: cx(
-    "group flex min-h-14 w-full items-center gap-4 border-b border-mist px-4 py-2 text-start transition-colors duration-150",
+    "group relative flex min-h-14 w-full items-center gap-4 border-b border-mist px-4 py-2 text-start transition-colors duration-150",
     "data-pressed:bg-mist data-disabled:opacity-50",
     focusRingInset,
   ),
@@ -78,6 +78,8 @@ export function ProductOptions({
   showProduct,
   isDisabled,
 }: Props) {
+  const sizeInputs = useRef(new Map<string, HTMLInputElement>());
+  const addOnInputs = useRef(new Map<string, HTMLInputElement>());
   const t = useStrings(strings);
   const locale = useLocale();
   const money = useMoney();
@@ -118,7 +120,7 @@ export function ProductOptions({
   const pillStyle = {
     "--n": product.sizes.length,
     "--i": sizeIndex,
-    width: "calc((100% - 0.25rem * (var(--n) - 1)) / var(--n))",
+    width: "calc((100% - 0.5rem - 0.25rem * (var(--n) - 1)) / var(--n))",
     transform: "translateX(calc(var(--dir) * var(--i) * (100% + 0.25rem)))",
   } as CSSProperties;
 
@@ -161,13 +163,27 @@ export function ProductOptions({
               style={pillStyle}
             />
             {product.sizes.map((s) => (
-              <Radio key={s.id} value={s.id} className={styles.segment}>
+              <Radio
+                key={s.id}
+                value={s.id}
+                className={styles.segment}
+                inputRef={(input) => {
+                  if (input) sizeInputs.current.set(s.id, input);
+                  else sizeInputs.current.delete(s.id);
+                }}
+                onPress={(event) =>
+                  focusOptionWithoutScrolling(
+                    event.pointerType,
+                    sizeInputs.current.get(s.id),
+                  )
+                }
+              >
                 <span className={styles.segmentText}>
                   <span className={styles.segmentName}>{s.name[locale]}</span>
                   <span className={styles.segmentPrice}>
                     {s.pricing.regular !== null && (
                       <span className={styles.segmentOldPrice}>
-                        {money(s.pricing.regular)}
+                        {Math.round(s.pricing.regular)}
                       </span>
                     )}
                     <span>{money(s.pricing.current)}</span>
@@ -201,13 +217,28 @@ export function ProductOptions({
 
       {hasAddOns && (
         <CheckboxGroup
+          className="relative"
           value={selectedIds}
           onChange={selectAddOns}
           isDisabled={isDisabled}
         >
           <Label className={styles.addOnsLabel}>{t.addOns}</Label>
           {product.addOns.map((addOn) => (
-            <Checkbox key={addOn.id} value={addOn.id} className={styles.addOn}>
+            <Checkbox
+              key={addOn.id}
+              value={addOn.id}
+              className={styles.addOn}
+              inputRef={(input) => {
+                if (input) addOnInputs.current.set(addOn.id, input);
+                else addOnInputs.current.delete(addOn.id);
+              }}
+              onPress={(event) =>
+                focusOptionWithoutScrolling(
+                  event.pointerType,
+                  addOnInputs.current.get(addOn.id),
+                )
+              }
+            >
               <span aria-hidden="true" className={styles.addOnBox}>
                 <Icon name="check" className={styles.tick} />
               </span>
@@ -221,4 +252,25 @@ export function ProductOptions({
       )}
     </section>
   );
+}
+
+function focusOptionWithoutScrolling(
+  pointerType: "mouse" | "pen" | "touch" | "keyboard" | "virtual",
+  input: HTMLInputElement | undefined,
+) {
+  if (
+    !input ||
+    (pointerType !== "mouse" &&
+      pointerType !== "pen" &&
+      pointerType !== "touch")
+  ) {
+    return;
+  }
+
+  const focus = input.focus;
+  input.focus = (options) =>
+    focus.call(input, { ...options, preventScroll: true });
+  queueMicrotask(() => {
+    input.focus = focus;
+  });
 }

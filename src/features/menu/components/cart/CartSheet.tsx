@@ -30,7 +30,6 @@ interface Props {
   lines: CartLine[];
   count: number;
   subtotal: number;
-  focusKey: string | null;
   onClose: () => void;
   onEdit: (line: CartLine) => void;
   onSetQty: (key: string, qty: number) => void;
@@ -53,7 +52,6 @@ export function CartSheet({
   lines,
   count,
   subtotal,
-  focusKey,
   onClose,
   onEdit,
   onSetQty,
@@ -100,7 +98,6 @@ export function CartSheet({
             <CartRow
               key={line.key}
               line={line}
-              autoFocusEdit={line.key === focusKey}
               onEdit={onEdit}
               onSetQty={onSetQty}
               onRemove={onRemove}
@@ -202,33 +199,31 @@ const rowStyles = {
   foldClosed: "grid-rows-[0fr] opacity-0",
   clip: "min-h-0 overflow-hidden",
   divider: "h-px w-full bg-mist",
-  row: "flex flex-col gap-2 px-4 py-3",
+  row: "grid grid-cols-[4rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1 px-4 py-2",
 
   edit: cx(
-    "group flex w-full items-start gap-3 rounded-md text-start",
+    "group col-start-2 flex w-full flex-col items-stretch gap-1 rounded-md text-start",
     focusRing,
   ),
-  thumbs: "flex size-16 shrink-0 gap-1",
+  thumbs:
+    "col-start-1 row-span-2 row-start-1 flex size-16 shrink-0 gap-1 rounded-md outline-none",
   thumb: "h-full flex-1 rounded-md",
-  details: "flex min-w-0 flex-1 flex-col gap-1",
   titleRow: "flex items-start justify-between gap-2",
   title: "min-w-0 text-body font-semibold text-balance",
   chipGroup: "flex flex-wrap items-center gap-1",
   chipOwner: "text-caption font-medium text-navy/65",
 
-  bottom: "ms-19 flex items-center justify-between gap-3",
+  bottom: "col-start-2 flex items-center justify-between gap-3",
   prices: "flex min-w-0 flex-wrap items-baseline gap-x-2",
 };
 
 function CartRow({
   line,
-  autoFocusEdit,
   onEdit,
   onSetQty,
   onRemove,
 }: {
   line: CartLine;
-  autoFocusEdit: boolean;
   onEdit: (line: CartLine) => void;
   onSetQty: (key: string, qty: number) => void;
   onRemove: (key: string) => void;
@@ -258,54 +253,62 @@ function CartRow({
         <div aria-hidden="true" className={rowStyles.divider} />
         <div className={rowStyles.row}>
           <Button
-            autoFocus={autoFocusEdit}
+            aria-hidden="true"
+            excludeFromTabOrder
+            onPress={() => onEdit(line)}
+            className={rowStyles.thumbs}
+          >
+            {line.choices.map((choice, i) => (
+              <Img
+                key={i}
+                image={choice.product.image}
+                className={rowStyles.thumb}
+              />
+            ))}
+          </Button>
+
+          <Button
             aria-label={t.a11yEdit(title)}
             onPress={() => onEdit(line)}
             className={rowStyles.edit}
           >
-            <span className={rowStyles.thumbs}>
-              {line.choices.map((choice, i) => (
-                <Img
-                  key={i}
-                  image={choice.product.image}
-                  className={rowStyles.thumb}
-                />
-              ))}
+            <span className={rowStyles.titleRow}>
+              <span className={rowStyles.title}>{title}</span>
+              <Chevron small />
             </span>
-            <span className={rowStyles.details}>
-              <span className={rowStyles.titleRow}>
-                <span className={rowStyles.title}>{title}</span>
-                <Chevron small />
-              </span>
-              {line.choices.map((choice, i) => {
-                const chips = [
-                  ...(choice.size ? [choice.size.name[locale]] : []),
-                  ...choice.addOns.map((addOn) => addOn.name[locale]),
-                ];
-                if (chips.length === 0) return null;
-                return (
-                  <span key={i} className={rowStyles.chipGroup}>
-                    {line.pairing && (
-                      <span className={rowStyles.chipOwner}>
-                        {choice.product.name[locale]}
-                      </span>
-                    )}
-                    {chips.map((chip, n) => (
-                      <Chip key={n} compact>
-                        {chip}
-                      </Chip>
-                    ))}
-                  </span>
-                );
-              })}
-            </span>
+            {line.choices.map((choice, i) => {
+              const chips = [
+                ...(choice.size ? [choice.size.name[locale]] : []),
+                ...choice.addOns.map((addOn) => addOn.name[locale]),
+              ];
+              if (chips.length === 0) return null;
+              return (
+                <span key={i} className={rowStyles.chipGroup}>
+                  {line.pairing && (
+                    <span className={rowStyles.chipOwner}>
+                      {choice.product.name[locale]}
+                    </span>
+                  )}
+                  {chips.map((chip, n) => (
+                    <Chip key={n} compact>
+                      {chip}
+                    </Chip>
+                  ))}
+                </span>
+              );
+            })}
           </Button>
 
           <div className={rowStyles.bottom}>
             <span className={rowStyles.prices}>
               <Price value={current * line.qty} size="body" rolling />
               {regular !== null && (
-                <Price value={regular * line.qty} size="caption" struck />
+                <Price
+                  value={regular * line.qty}
+                  size="caption"
+                  struck
+                  showCurrency={false}
+                />
               )}
             </span>
             <Stepper

@@ -75,7 +75,7 @@ const cardStyles = {
   image: "size-24 shrink-0 rounded-md",
   content: "flex min-w-0 flex-1 flex-col gap-0.5",
   name: "line-clamp-2 text-body font-semibold text-balance",
-  description: "line-clamp-1 text-caption font-medium text-navy/65",
+  description: "line-clamp-2 text-caption font-medium text-navy/65",
   bottom: "mt-auto flex items-center justify-between gap-2 pt-1",
   unavailable: "opacity-60",
   chevron: "-my-1",

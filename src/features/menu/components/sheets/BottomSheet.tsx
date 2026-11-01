@@ -39,7 +39,7 @@ const styles = {
     "pointer-events-none absolute inset-y-0 start-4 end-14 flex items-center truncate text-body font-bold transition-opacity duration-150",
   closeSlot: "absolute inset-y-0 end-1.5 z-10 flex items-center",
   scroller:
-    "min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 [overflow-anchor:none]",
+    "min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 [overflow-anchor:none] [scroll-behavior:auto]",
   footer:
     "shrink-0 border-t border-mist bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]",
 };
@@ -51,8 +51,9 @@ export function BottomSheet({
   footer,
   children,
 }: Props) {
-  const dialogRef = useRef<HTMLElement>(null);
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const topBarRef = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
 
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -96,20 +97,25 @@ export function BottomSheet({
       ? ({ transform: `translateY(${dragOffset}px)` } as CSSProperties)
       : undefined;
 
+  // Runs at most once per frame, and writes the fade only to the top bar (not the whole dialog).
   function updateTitleFade() {
-    const dialog = dialogRef.current;
-    const scroller = scrollerRef.current;
-    if (!dialog || !scroller) return;
-    const heading = scroller.querySelector<HTMLElement>("[data-sheet-title]");
-    const headingBottom = heading
-      ? heading.getBoundingClientRect().bottom -
-        scroller.getBoundingClientRect().top
-      : TITLE_FADE_PX - scroller.scrollTop;
-    const progress = Math.min(
-      1,
-      Math.max(0, (TITLE_FADE_PX - headingBottom) / TITLE_FADE_PX),
-    );
-    dialog.style.setProperty("--bar-p", progress.toFixed(3));
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      const topBar = topBarRef.current;
+      const scroller = scrollerRef.current;
+      if (!topBar || !scroller) return;
+      const heading = scroller.querySelector<HTMLElement>("[data-sheet-title]");
+      const headingBottom = heading
+        ? heading.getBoundingClientRect().bottom -
+          scroller.getBoundingClientRect().top
+        : TITLE_FADE_PX - scroller.scrollTop;
+      const progress = Math.min(
+        1,
+        Math.max(0, (TITLE_FADE_PX - headingBottom) / TITLE_FADE_PX),
+      );
+      topBar.style.setProperty("--bar-p", progress.toFixed(3));
+    });
   }
 
   return (
@@ -128,8 +134,8 @@ export function BottomSheet({
           )
         }
       >
-        <Dialog ref={dialogRef} aria-label={label} className={styles.dialog}>
-          <div className={styles.topBar}>
+        <Dialog aria-label={label} className={styles.dialog}>
+          <div ref={topBarRef} className={styles.topBar}>
             <span
               aria-hidden="true"
               className={styles.topBarLine}

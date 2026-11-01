@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useState, type ReactNode } from "react";
 import {
   Button,
   Dialog,
@@ -33,9 +33,10 @@ interface Props {
 
 const styles = {
   overlay:
-    "fixed inset-0 z-50 flex justify-center bg-scrim md:items-start md:p-6 md:pt-[8dvh] data-entering:animate-scrim-in data-exiting:animate-scrim-out",
+    "fixed inset-0 z-50 flex justify-center overscroll-none md:items-start md:p-6 md:pt-[8dvh] data-entering:animate-scrim-in data-exiting:animate-scrim-out",
+  scrim: "pointer-events-none absolute inset-0 bg-scrim",
   modal:
-    "flex h-full w-full max-w-120 flex-col overflow-hidden bg-white outline-none md:h-[min(40rem,80dvh)] md:max-w-140 md:rounded-lg md:shadow-sheet",
+    "relative z-10 flex h-full w-full max-w-120 flex-col overflow-hidden bg-white outline-none md:h-[min(40rem,80dvh)] md:max-w-140 md:rounded-lg md:shadow-sheet",
   dialog: "flex min-h-0 flex-1 flex-col outline-none",
 
   topBar: "flex items-center gap-1 border-b border-arctic ps-4 pe-2",
@@ -72,8 +73,26 @@ const styles = {
   unavailable: "opacity-60",
 };
 
+function useLockPageScroll(locked: boolean) {
+  useEffect(() => {
+    if (!locked) return;
+    const { body } = document;
+    const previous = {
+      overflow: body.style.overflow,
+      overscroll: body.style.overscrollBehavior,
+    };
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      body.style.overflow = previous.overflow;
+      body.style.overscrollBehavior = previous.overscroll;
+    };
+  }, [locked]);
+}
+
 export function SearchOverlay({ isOpen, onClose, ...rest }: Props) {
   const t = useStrings(strings);
+  useLockPageScroll(isOpen);
 
   return (
     <ModalOverlay
@@ -82,6 +101,7 @@ export function SearchOverlay({ isOpen, onClose, ...rest }: Props) {
       isDismissable
       className={styles.overlay}
     >
+      <div aria-hidden="true" className={styles.scrim} />
       <Modal className={styles.modal}>
         <Dialog aria-label={t.a11ySearch} className={styles.dialog}>
           <SearchPanel onClose={onClose} {...rest} />
@@ -102,7 +122,8 @@ function SearchPanel({
   const locale = useLocale();
   const [query, setQuery] = useState("");
 
-  const text = query.trim().toLocaleLowerCase();
+  const deferredQuery = useDeferredValue(query);
+  const text = deferredQuery.trim().toLocaleLowerCase();
   const matches = (value: string) => value.toLocaleLowerCase().includes(text);
 
   const categories = text

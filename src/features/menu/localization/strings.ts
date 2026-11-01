@@ -46,6 +46,7 @@ const en = {
   errorServer: "We couldn't load the menu right now. Please try again shortly.",
   retry: "Retry",
   promoAlt: "A special offer",
+  a11yBackHome: "Back to home",
   a11yClose: "Close",
   a11ySearch: "Search",
   a11yCategories: "Categories",
@@ -105,6 +106,7 @@ const ar: typeof en = {
   errorServer: "تعذر تحميل القائمة الآن. حاول مرة أخرى بعد قليل.",
   retry: "إعادة المحاولة",
   promoAlt: "عرض خاص",
+  a11yBackHome: "العودة إلى الرئيسية",
   a11yClose: "إغلاق",
   a11ySearch: "بحث",
   a11yCategories: "الأقسام",
@@ -126,6 +128,6 @@ export function useMoney() {
   return (value: number, withPlus = false) => {
     const sign = withPlus ? "+" : "";
     const amount = Math.round(value);
-    return locale === "ar" ? `${sign}${amount} ج.م` : `${sign}EGP ${amount}`;
+    return locale === "ar" ? `${sign}${amount} ج.م` : `${sign}${amount} EGP`;
   };
 }

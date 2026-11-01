@@ -43,7 +43,6 @@ export function Menu({ menu }: { menu: MenuResponse }) {
     pairing: Pairing;
     editing: CartLine | null;
   } | null>(null);
-  const [focusLineKey, setFocusLineKey] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
 
   // ---- Sections of the page ----
@@ -76,8 +75,7 @@ export function Menu({ menu }: { menu: MenuResponse }) {
     setOpenPanel("pairing");
   }
 
-  function openCart(focusKey: string | null = null) {
-    setFocusLineKey(focusKey);
+  function openCart() {
     setOpenPanel("cart");
   }
 
@@ -100,7 +98,7 @@ export function Menu({ menu }: { menu: MenuResponse }) {
     if (editing) {
       cart.replace(editing.key, line);
       announce(t.a11yOrderUpdated);
-      openCart(line.key); // after editing, go back to the cart
+      openCart(); 
     } else {
       cart.add(line);
       announce(t.a11yAdded(lineTitle(line.choices, locale)));
@@ -109,7 +107,7 @@ export function Menu({ menu }: { menu: MenuResponse }) {
   }
 
   function closeSheet(editing: CartLine | null) {
-    if (editing) openCart(editing.key);
+    if (editing) openCart();
     else closePanel();
   }
 
@@ -190,7 +188,6 @@ export function Menu({ menu }: { menu: MenuResponse }) {
         lines={cart.lines}
         count={cart.count}
         subtotal={cart.subtotal}
-        focusKey={focusLineKey}
         onClose={closePanel}
         onEdit={editLine}
         onSetQty={cart.setQty}

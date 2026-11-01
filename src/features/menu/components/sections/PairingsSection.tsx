@@ -111,7 +111,14 @@ function PairingCard({
       </span>
       <span className={cx(cardStyles.bottom, !available && "opacity-60")}>
         <Price value={current} size="small" />
-        {regular !== null && <Price value={regular} size="caption" struck />}
+        {regular !== null && (
+          <Price
+            value={regular}
+            size="caption"
+            struck
+            showCurrency={false}
+          />
+        )}
         <span className={cardStyles.chevron}>
           <Chevron small />
         </span>

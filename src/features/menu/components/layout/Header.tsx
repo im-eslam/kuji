@@ -5,11 +5,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "react-aria-components";
+import { Button, Link } from "react-aria-components";
 import avatar from "@/assets/avatar.jpg";
 import wordmark from "@/assets/wordmark.png";
 import { setLocale, useLocale, useStrings } from "@/shared/i18n";
 import { Icon, type IconName } from "@/shared/icons";
+import { ROUTES } from "@/shared/routes";
 import { strings } from "../../localization/strings";
 import { cx, focusRing, pageWidth } from "../shared/ui";
 
@@ -35,7 +36,8 @@ const styles = {
   menuSlot: "shrink-0 ps-1 md:ps-3",
   nav: "relative h-12 min-w-0 flex-1",
   rail: "no-scrollbar relative flex h-12 items-center gap-1 overflow-x-auto overscroll-x-contain px-4",
-  highlight: "absolute top-1 left-0 h-10 rounded-full bg-yellow",
+  highlight:
+    "absolute top-1 left-0 h-10 rounded-full bg-yellow will-change-transform",
   highlightSlides:
     "transition-[transform,width] duration-250 ease-[var(--ease-smooth)]",
   pill: cx(
@@ -57,6 +59,7 @@ const styles = {
     focusRing,
   ),
   icon: "size-6",
+  backIcon: "size-6 scale-x-[1] scale-y-[1]",
   language: cx("flex h-12 shrink-0 items-center rounded-full", focusRing),
   languageBody:
     "flex h-10 items-center gap-1 rounded-full border border-arctic px-3 text-small",
@@ -154,21 +157,40 @@ export function Header({
 
   const measureHighlight = useCallback(() => {
     const pill = findPill(rail.current, activeId);
-    if (pill) setHighlight({ x: pill.offsetLeft, width: pill.offsetWidth });
+    if (!pill) return;
+    const next = { x: pill.offsetLeft, width: pill.offsetWidth };
+    setHighlight((prev) =>
+      prev && prev.x === next.x && prev.width === next.width ? prev : next,
+    );
   }, [activeId]);
 
-  useLayoutEffect(measureHighlight, [measureHighlight, locale]);
+  const lastLocale = useRef(locale);
+  const lastScrolledLocale = useRef(locale);
+  useLayoutEffect(() => {
+    if (lastLocale.current !== locale) {
+      lastLocale.current = locale;
+      setHighlightCanSlide(false);
+    }
+    measureHighlight();
+  }, [measureHighlight, locale]);
 
   useEffect(() => {
     const element = rail.current;
     if (!element) return;
-    const observer = new ResizeObserver(measureHighlight);
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measureHighlight);
+    });
     observer.observe(element);
     element
       .querySelectorAll("button")
       .forEach((pill) => observer.observe(pill));
     document.fonts?.ready.then(measureHighlight);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [measureHighlight, locale]);
 
   useEffect(() => {
@@ -181,13 +203,16 @@ export function Header({
     const element = rail.current;
     const pill = findPill(element, activeId);
     if (!element || !pill) return;
+    const localeJustChanged = lastScrolledLocale.current !== locale;
+    lastScrolledLocale.current = locale;
     const railBox = element.getBoundingClientRect();
     const pillBox = pill.getBoundingClientRect();
     const offset =
       pillBox.left + pillBox.width / 2 - (railBox.left + railBox.width / 2);
     element.scrollBy({
       left: offset,
-      behavior: railHasBeenCentered.current ? "smooth" : "auto",
+      behavior:
+        railHasBeenCentered.current && !localeJustChanged ? "smooth" : "auto",
     });
     railHasBeenCentered.current = true;
   }, [activeId, locale]);
@@ -205,6 +230,15 @@ export function Header({
   return (
     <header className={styles.header}>
       <div className={styles.topRow}>
+        <Link
+          href={ROUTES.landing}
+          aria-label={t.a11yBackHome}
+          className={cx(styles.iconButton, "-ms-3")}
+        >
+          <span className="flex scale-x-[-1]">
+            <Icon name="arrow" className={styles.backIcon} />
+          </span>
+        </Link>
         <div className={styles.brand}>
           <img src={avatar} alt="" className={styles.avatar} />
           <img src={wordmark} alt="Kuji" className={styles.wordmark} />

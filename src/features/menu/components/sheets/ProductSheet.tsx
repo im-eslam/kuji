@@ -104,7 +104,13 @@ export function ProductSheet({
   );
 
   return (
-    <BottomSheet isOpen={isOpen} label={name} onClose={onClose} footer={footer}>
+    <BottomSheet
+      isOpen={isOpen}
+      label={name}
+      onClose={onClose}
+      footer={footer}
+    >
+      {" "}
       <div className={styles.content}>
         <div className={styles.hero}>
           <Img
