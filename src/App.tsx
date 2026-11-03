@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { I18nProvider, Link, RouterProvider } from "react-aria-components";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { ReviewPage } from "@/features/review/ReviewPage";
@@ -5,6 +6,12 @@ import { MenuPage } from "@/features/menu/MenuPage";
 import { useLocale, type Locale } from "@/shared/i18n";
 import { navigate, usePath } from "@/shared/router";
 import { ROUTES } from "@/shared/routes";
+
+const AdminPage = lazy(() =>
+  import("@/features/admin/AdminPage").then((module) => ({
+    default: module.AdminPage,
+  })),
+);
 
 function NotFoundPage({ locale }: { locale: Locale }) {
   const isArabic = locale === "ar";
@@ -27,12 +34,17 @@ function NotFoundPage({ locale }: { locale: Locale }) {
 export default function App() {
   const locale = useLocale();
   const path = usePath();
+  const isAdmin = path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`);
   const isLandingExperience = path === ROUTES.landing || path === ROUTES.review;
 
   return (
     <I18nProvider locale={locale}>
       <RouterProvider navigate={navigate}>
-        {path === ROUTES.menu ? (
+        {isAdmin ? (
+          <Suspense fallback={<div className="min-h-dvh bg-mist" />}>
+            <AdminPage />
+          </Suspense>
+        ) : path === ROUTES.menu ? (
           <MenuPage />
         ) : isLandingExperience ? (
           <>

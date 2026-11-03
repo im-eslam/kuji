@@ -15,7 +15,7 @@ import { ChoiceCard } from "./components/ChoiceCard";
 import { ReviewForm, type ReviewFormValues } from "./components/ReviewForm";
 import { ThankYou } from "./components/ThankYou";
 import { GOOGLE_REVIEW_URL, LIMITS, REVIEW_API } from "./config";
-import { strings } from "./strings";
+import { strings } from "./localization/strings";
 import { useSheetDrag } from "./hooks/useSheetDrag";
 
 const EMPTY_FORM: ReviewFormValues = {

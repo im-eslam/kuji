@@ -7,8 +7,8 @@ import { Background } from "./components/Background";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { LanguageToggle } from "./components/LanguageToggle";
-import { site } from "./site";
-import { strings } from "./strings";
+import { site } from "./data/site";
+import { strings } from "./localization/strings";
 
 const styles = {
   page: "relative isolate min-h-dvh",

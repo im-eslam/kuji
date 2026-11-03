@@ -9,12 +9,19 @@ export type ApiSuccess = {
 export class ApiError extends Error {
   public readonly status: number;
   public readonly code?: string;
+  public readonly retryAfter?: number;
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(
+    status: number,
+    message: string,
+    code?: string,
+    retryAfter?: number,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -38,6 +45,12 @@ function readErrorCode(value: unknown): string | undefined {
     return value.code;
   }
   return undefined;
+}
+
+// Seconds only; the HTTP-date form of Retry-After is not used by our API.
+function readRetryAfter(response: Response): number | undefined {
+  const seconds = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 export async function getJson<T>(
@@ -72,6 +85,7 @@ export async function getJson<T>(
         response.status,
         readErrorMessage(data) ?? "Request failed",
         readErrorCode(data),
+        readRetryAfter(response),
       );
     }
 
@@ -131,6 +145,7 @@ export async function postJson<T extends ApiSuccess = ApiSuccess>(
         response.status,
         readErrorMessage(data) ?? "Request failed",
         readErrorCode(data),
+        readRetryAfter(response),
       );
     }
 

@@ -5,11 +5,11 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
-require __DIR__ . '/../../core/Autoload.php';
-Autoload::register(__DIR__ . '/../..');
+require __DIR__ . '/../core/Autoload.php';
+Autoload::register(__DIR__ . '/..');
 
-Env::load(__DIR__ . '/../../.env');
-$config = require __DIR__ . '/../../config.php';
+Env::load(__DIR__ . '/../.env');
+$config = require __DIR__ . '/../config.php';
 $table  = Auth::settings($config)['table'];
 
 $username = strtolower(trim($argv[1] ?? ''));
