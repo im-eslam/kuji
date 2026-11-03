@@ -41,21 +41,63 @@ class ReviewsController extends Controller
     {
         Auth::requireAdmin($this->config);
 
-        $cfg   = $this->settings();
+        $cfg = $this->settings();
         $paging = $cfg['admin'];
         $table = $cfg['table'];
 
-        $page    = max(1, min(100000, (int) ($_GET['page'] ?? 1)));
-        $perPage = (int) ($_GET['per_page'] ?? $paging['default_per_page']);
-        $perPage = max(1, min($paging['max_per_page'], $perPage ?: $paging['default_per_page']));
-        $offset  = ($page - 1) * $perPage; // both values are validated integers
+        $rawSearch = $_GET['q'] ?? '';
+        if (!is_string($rawSearch)) {
+            Http::fail(422, 'Invalid search query', 'INVALID_INPUT');
+        }
+        $search = trim($rawSearch);
+        if (mb_strlen($search) > $paging['max_search']) {
+            Http::fail(422, 'Search query is too long', 'INVALID_INPUT');
+        }
 
-        $pdo   = $this->db();
-        $total = (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn();
-        $rows  = $pdo->query(
-            "SELECT id, name, contact, message, created_at FROM $table ORDER BY id DESC LIMIT $perPage OFFSET $offset"
-        )->fetchAll();
+        $rawPage = $_GET['page'] ?? '1';
+        $rawPerPage = $_GET['per_page'] ?? (string) $paging['default_per_page'];
+        if (
+            !is_string($rawPage) || !ctype_digit($rawPage) ||
+            !is_string($rawPerPage) || !ctype_digit($rawPerPage)
+        ) {
+            Http::fail(422, 'Invalid pagination parameters', 'INVALID_INPUT');
+        }
 
+        $page = max(1, min(100000, (int) $rawPage));
+        $perPage = max(1, min($paging['max_per_page'], (int) $rawPerPage));
+
+        $where = '';
+        $searchParams = [];
+        if ($search !== '') {
+            $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
+            $pattern = '%' . $escaped . '%';
+            $where = " WHERE name ILIKE ? ESCAPE '!' OR contact ILIKE ? ESCAPE '!' OR message ILIKE ? ESCAPE '!'";
+            $searchParams = [$pattern, $pattern, $pattern];
+        }
+
+        $pdo = $this->db();
+        $countStmt = $pdo->prepare("SELECT COUNT(*) FROM {$table}{$where}");
+        $countStmt->execute($searchParams);
+        $total = (int) $countStmt->fetchColumn();
+
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+
+        $stmt = $pdo->prepare(
+            "SELECT id, name, contact, message, created_at
+             FROM {$table}{$where}
+             ORDER BY created_at DESC, id DESC
+             LIMIT ? OFFSET ?"
+        );
+        foreach ($searchParams as $index => $value) {
+            $stmt->bindValue($index + 1, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(count($searchParams) + 1, $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(count($searchParams) + 2, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $rows = $stmt->fetchAll();
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];
         }
@@ -67,7 +109,7 @@ class ReviewsController extends Controller
             'page'        => $page,
             'per_page'    => $perPage,
             'total'       => $total,
-            'total_pages' => max(1, (int) ceil($total / $perPage)),
+            'total_pages' => $totalPages,
         ]);
     }
 

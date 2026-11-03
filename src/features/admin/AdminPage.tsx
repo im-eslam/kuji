@@ -16,9 +16,11 @@ import {
 import { ensureSession, retrySession, useSession } from "./data/session";
 import { usePageMeta } from "./hooks/usePageMeta";
 import { LoginPage } from "./LoginPage";
+import { ReviewsTab } from "./tabs/review/ReviewsTab";
 import { strings } from "./localization/strings";
 
 function renderTab(id: TabId): ReactNode {
+  if (id === "reviews") return <ReviewsTab />;
   return <TabPlaceholder id={id} />;
 }
 

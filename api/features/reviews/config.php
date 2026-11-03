@@ -11,7 +11,12 @@ return [
         'window' => (int) Env::get('RATE_LIMIT_WINDOW', '600'),
     ],
 
-    'admin' => ['default_per_page' => 20, 'max_per_page' => 100, 'max_delete_batch' => 100],
+    'admin' => [
+        'default_per_page' => 20,
+        'max_per_page' => 100,
+        'max_delete_batch' => 100,
+        'max_search' => 120,
+    ],
 
     'routes' => [
         'POST /review'              => [ReviewsController::class, 'submit'],
